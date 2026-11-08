@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SaneLinkRules",
+  "description": "Rules definition schema for SaneLink open-source sanitization rules",
+  "type": "object",
+  "required": ["version", "universalParameters", "sites"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "description": "Schema version number"
+    },
+    "description": {
+      "type": "string"
+    },
+    "universalParameters": {
+      "type": "array",
+      "description": "Query parameters stripped from any URL regardless of domain",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sites": {
+      "type": "array",
+      "description": "Site-specific sanitization and redirect rules",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "domains"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the rule"
+          },
+          "name": {
+            "type": "string",
+            "description": "Human readable name of the service"
+          },
+          "description": {
+            "type": "string",
+            "description": "Short explanation of what is cleaned"
+          },
+          "domains": {
+            "type": "array",
+            "description": "List of domains matching this rule (without protocol)",
+            "items": { "type": "string" }
+          },
+          "stripParameters": {
+            "type": "array",
+            "description": "Query parameters to strip for these domains",
+            "items": { "type": "string" }
+          },
+          "keepParameters": {
+            "type": "array",
+            "description": "Explicit parameters to preserve if whitelist strategy is desired",
+            "items": { "type": "string" }
+          },
+          "paths": {
+            "type": "array",
+            "description": "Specific URL paths to match (e.g. /url or /l.php)",
+            "items": { "type": "string" }
+          },
+          "unwrapParameter": {
+            "type": "string",
+            "description": "Query parameter containing the encoded real destination URL"
+          },
+          "canonicalPathRegex": {
+            "type": "string",
+            "description": "Regex applied to the URL path to normalize it (e.g. Amazon /dp/ASIN)"
+          },
+          "canonicalPathReplacement": {
+            "type": "string",
+            "description": "Replacement string with $1, $2 capture groups for path regex"
+          },
+          "rewriteDomain": {
+            "type": ["string", "null"],
+            "description": "Alternative privacy frontend host (e.g. fxtwitter.com, redlib.catsarch.com)"
+          }
+        }
+      }
+    }
+  }
+}

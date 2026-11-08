@@ -1,0 +1,259 @@
+name: Release SaneLink
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'app/build.gradle.kts'
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Build & Release SaneLink APK
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Extract App Version from build.gradle.kts
+        id: extract_version
+        run: |
+          VERSION=$(grep 'versionName = ' app/build.gradle.kts | head -n 1 | cut -d '"' -f 2)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "TAG_NAME=v$VERSION" >> $GITHUB_ENV
+          echo "Extracted version: $VERSION"
+
+      - name: Check if version changed since previous commit
+        id: version_changed
+        run: |
+          CURRENT_VERSION=$(grep 'versionName = ' app/build.gradle.kts | head -n 1 | cut -d '"' -f 2)
+          PREV_VERSION=""
+
+          if [ "${{ github.event_name }}" = "push" ] && git rev-parse HEAD^ >/dev/null 2>&1; then
+            PREV_VERSION=$(git show HEAD^:app/build.gradle.kts 2>/dev/null | grep 'versionName = ' | head -n 1 | cut -d '"' -f 2 || true)
+          fi
+
+          echo "Current version: $CURRENT_VERSION"
+          echo "Previous version: $PREV_VERSION"
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          elif [ -n "${{ github.ref_name }}" ] && [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          elif [ -z "$PREV_VERSION" ]; then
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          elif [ "$CURRENT_VERSION" != "$PREV_VERSION" ]; then
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Skip release if version unchanged
+        if: steps.version_changed.outputs.should_release != 'true'
+        run: echo "Skipping release because the app version did not change."
+
+      - name: Set up Java JDK 17
+        if: steps.version_changed.outputs.should_release == 'true'
+        uses: actions/setup-java@v6
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Grant Execute Permission for Gradlew
+        if: steps.version_changed.outputs.should_release == 'true'
+        run: chmod +x gradlew
+
+      - name: Run Unit Tests
+        if: steps.version_changed.outputs.should_release == 'true'
+        run: ./gradlew testDebugUnitTest --no-daemon
+
+      - name: Generate Commit Changelog
+        if: steps.version_changed.outputs.should_release == 'true'
+        id: changelog
+        env:
+          TAG_NAME: ${{ env.TAG_NAME }}
+          REPO_NAME: ${{ github.repository }}
+        run: |
+          python3 - << 'EOF'
+          import subprocess
+          import re
+          import os
+
+          tag = os.environ.get('TAG_NAME', '')
+          repo = os.environ.get('REPO_NAME', 'GamerJagdish/sanelink')
+
+          try:
+              prev_tag = subprocess.check_output(['git', 'describe', '--tags', '--abbrev=0', 'HEAD^'], encoding='utf-8').strip()
+          except Exception:
+              prev_tag = ''
+
+          range_spec = f'{prev_tag}..HEAD' if prev_tag else 'HEAD'
+
+          sep_record = '\x1e'
+          sep_field = '\x1f'
+
+          cmd = ['git', 'log', range_spec, f'--pretty=format:{sep_record}%h{sep_field}%an{sep_field}%ae{sep_field}%s{sep_field}%b']
+          raw = subprocess.check_output(cmd, encoding='utf-8')
+          records = [r for r in raw.split(sep_record) if r.strip()]
+
+          def get_username(name, email):
+              m = re.match(r'^[0-9]+\+([^@]+)@users\.noreply\.github\.com$', email)
+              if m:
+                  return m.group(1)
+              if 'imgbot' in name.lower() or 'imgbot' in email.lower():
+                  return 'imgbot[bot]'
+              if re.match(r'^[a-zA-Z0-9_-]+$', name):
+                  return name
+              return 'GamerJagdish'
+
+          commits = []
+          for rec in records:
+              parts = rec.strip().split(sep_field)
+              if len(parts) < 4:
+                  continue
+              h, author, email, subj = parts[0], parts[1], parts[2], parts[3]
+              body = parts[4].strip() if len(parts) > 4 else ''
+
+              user = get_username(author, email)
+              commit_url = f'https://github.com/{repo}/commit/{h}'
+              commits.append(f'* {subj} by @{user} in {commit_url}')
+
+              if body:
+                  for b_line in body.split('\n'):
+                      b_line = b_line.strip()
+                      if not b_line:
+                          continue
+                      b_line = re.sub(r'^[\*\-\+]\s+', '', b_line)
+                      commits.append(f'  * {b_line}')
+
+          new_contributors = {}
+          if prev_tag:
+              for rec in reversed(records):
+                  parts = rec.strip().split(sep_field)
+                  if len(parts) < 4:
+                      continue
+                  h, author, email, subj = parts[0], parts[1], parts[2], parts[3]
+                  user = get_username(author, email)
+                  if user not in new_contributors:
+                      try:
+                          prior = subprocess.check_output(['git', 'log', prev_tag, f'--author={email}', '--oneline'], encoding='utf-8').strip()
+                          if not prior:
+                              new_contributors[user] = h
+                      except Exception:
+                          pass
+
+          changelog = ["## What's Changed"]
+          changelog.extend(commits)
+
+          if new_contributors:
+              changelog.append('')
+              changelog.append('## New Contributors')
+              for u, h in new_contributors.items():
+                  changelog.append(f'* @{u} made their first contribution in https://github.com/{repo}/commit/{h}')
+
+          changelog.append('')
+          if prev_tag:
+              changelog.append(f'**Full Changelog**: https://github.com/{repo}/compare/{prev_tag}...{tag}')
+          else:
+              changelog.append(f'**Full Changelog**: https://github.com/{repo}/commits/{tag}')
+
+          with open('CHANGELOG_RELEASE.md', 'w', encoding='utf-8') as f:
+              f.write('\n'.join(changelog) + '\n')
+          print("Changelog generated successfully.")
+          EOF
+
+      - name: Decode Android Release Keystore
+        if: steps.version_changed.outputs.should_release == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          mkdir -p keystore
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > keystore/release.jks
+          fi
+
+      - name: Build Release APK
+        if: steps.version_changed.outputs.should_release == 'true'
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/keystore/release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          ./gradlew assembleRelease --no-daemon
+          mkdir -p release_apks
+          if [ -f "app/build/outputs/apk/release/app-release.apk" ]; then
+            cp app/build/outputs/apk/release/app-release.apk release_apks/SaneLink-${{ env.VERSION }}.apk
+          elif [ -f "app/build/outputs/apk/release/app-release-unsigned.apk" ]; then
+            cp app/build/outputs/apk/release/app-release-unsigned.apk release_apks/SaneLink-${{ env.VERSION }}.apk
+          fi
+
+      - name: Clean up Keystore
+        if: always()
+        run: rm -rf keystore/release.jks
+
+      - name: Configure SSH Signing and Create Signed Tag
+        if: steps.version_changed.outputs.should_release == 'true'
+        env:
+          SSH_SIGNING_KEY: ${{ secrets.SSH_SIGNING_KEY }}
+        run: |
+          if [ -n "$SSH_SIGNING_KEY" ]; then
+            echo "Configuring SSH key for signed git tag..."
+            mkdir -p ~/.ssh
+            trap 'rm -f ~/.ssh/id_signing' EXIT
+            printf '%s\n' "$SSH_SIGNING_KEY" | tr -d '\r' > ~/.ssh/id_signing
+            chmod 600 ~/.ssh/id_signing
+
+            git config --global user.name "GamerJagdish"
+            git config --global user.email "83897547+GamerJagdish@users.noreply.github.com"
+            git config --global gpg.format ssh
+            git config --global user.signingkey ~/.ssh/id_signing
+            git config --global tag.gpgsign true
+
+            git fetch --tags origin || true
+            if ! git rev-parse "${{ env.TAG_NAME }}" >/dev/null 2>&1; then
+              echo "Creating signed tag: ${{ env.TAG_NAME }}"
+              git tag -s "${{ env.TAG_NAME }}" -m "Release ${{ env.TAG_NAME }}"
+              git push origin "${{ env.TAG_NAME }}"
+            else
+              echo "Tag ${{ env.TAG_NAME }} already exists."
+            fi
+
+            rm -f ~/.ssh/id_signing
+            echo "SSH signing key cleaned up successfully."
+          else
+            echo "SSH_SIGNING_KEY secret not set. Skipping signed tag creation."
+          fi
+
+      - name: Attest APK Artifacts
+        if: steps.version_changed.outputs.should_release == 'true'
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: 'release_apks/*.apk'
+
+      - name: Create or Update GitHub Release
+        if: steps.version_changed.outputs.should_release == 'true'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          name: ${{ env.TAG_NAME }}
+          body_path: CHANGELOG_RELEASE.md
+          draft: false
+          prerelease: false
+          overwrite_files: true
+          files: release_apks/SaneLink-${{ env.VERSION }}.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
