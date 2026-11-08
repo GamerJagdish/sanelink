@@ -2,6 +2,12 @@ name: Release SaneLink
 
 on:
   workflow_dispatch:
+    inputs:
+      force_release:
+        description: 'Force release even if app version is unchanged'
+        required: false
+        type: boolean
+        default: true
   push:
     branches:
       - main
@@ -49,14 +55,19 @@ jobs:
           echo "Previous version: $PREV_VERSION"
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual workflow dispatch trigger."
             echo "should_release=true" >> $GITHUB_OUTPUT
           elif [ -n "${{ github.ref_name }}" ] && [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "Git tag push trigger."
             echo "should_release=true" >> $GITHUB_OUTPUT
           elif [ -z "$PREV_VERSION" ]; then
+            echo "Initial commit or no previous version."
             echo "should_release=true" >> $GITHUB_OUTPUT
           elif [ "$CURRENT_VERSION" != "$PREV_VERSION" ]; then
+            echo "Version changed from $PREV_VERSION to $CURRENT_VERSION."
             echo "should_release=true" >> $GITHUB_OUTPUT
           else
+            echo "Version unchanged."
             echo "should_release=false" >> $GITHUB_OUTPUT
           fi
 
