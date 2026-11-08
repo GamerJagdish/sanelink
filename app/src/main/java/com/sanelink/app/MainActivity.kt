@@ -7,6 +7,7 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,9 +39,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.hazeBlur
+import dev.chrisbanes.haze.blur.material3.Material3
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import com.sanelink.app.core.model.CustomRule
 import com.sanelink.app.ui.screens.AddEditCustomRuleScreen
 import com.sanelink.app.ui.screens.HomeScreen
@@ -127,12 +136,15 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     ) { innerPadding ->
+                        val hazeState = rememberHazeState()
+
                         Box(modifier = Modifier.fillMaxSize()) {
                             // Edge-to-edge screen content (scrolls underneath the floating nav bar)
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .padding(top = innerPadding.calculateTopPadding())
+                                    .hazeSource(hazeState)
                             ) {
                                 when (selectedTab) {
                                     0 -> HomeScreen()
@@ -146,17 +158,32 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
 
-                            // Floating Expressive Navigation Bar on top of content
+                            // Floating Expressive Frosted Blur Navigation Bar
+                            val navBarShape = RoundedCornerShape(32.dp)
+                            val blurStyle = HazeBlurStyle.Material3()
+
                             Surface(
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
                                     .padding(horizontal = 20.dp)
                                     .navigationBarsPadding()
-                                    .padding(bottom = 12.dp),
-                                shape = RoundedCornerShape(32.dp),
-                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-                                tonalElevation = 8.dp,
-                                shadowElevation = 12.dp
+                                    .padding(bottom = 12.dp)
+                                    .shadow(
+                                        elevation = 12.dp,
+                                        shape = navBarShape,
+                                        spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
+                                        ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    )
+                                    .clip(navBarShape)
+                                    .hazeBlur(
+                                        input = HazeInput.Sources(hazeState),
+                                        style = blurStyle
+                                    ),
+                                shape = navBarShape,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.70f),
+                                tonalElevation = 0.dp,
+                                shadowElevation = 0.dp
                             ) {
                                 NavigationBar(
                                     containerColor = Color.Transparent,

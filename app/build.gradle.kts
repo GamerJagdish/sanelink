@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.sanelink.app"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.gamerjagdish.sanelink"
@@ -107,6 +107,11 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1")
+
+    // Frosted Blur & Visual Effects (Haze 2.1.0)
+    implementation("dev.chrisbanes.haze:haze:2.1.0")
+    implementation("dev.chrisbanes.haze:haze-blur:2.1.0")
+    implementation("dev.chrisbanes.haze:haze-blur-material3:2.1.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
