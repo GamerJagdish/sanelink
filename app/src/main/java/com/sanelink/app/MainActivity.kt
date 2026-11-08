@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.HazePerformanceMode
 import dev.chrisbanes.haze.blur.HazeBlurStyle
 import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.blur.material3.Material3
@@ -177,7 +178,8 @@ class MainActivity : ComponentActivity() {
                                     .clip(navBarShape)
                                     .hazeBlur(
                                         input = HazeInput.Sources(hazeState),
-                                        style = blurStyle
+                                        style = blurStyle,
+                                        performanceMode = HazePerformanceMode.Performance
                                     ),
                                 shape = navBarShape,
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),

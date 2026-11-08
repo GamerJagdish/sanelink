@@ -224,7 +224,11 @@ fun RulesScreen(
                         contentPadding = PaddingValues(bottom = 220.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        items(providersList, key = { it.first }) { (name, rule) ->
+                        items(
+                            items = providersList,
+                            key = { it.first },
+                            contentType = { "built_in_provider" }
+                        ) { (name, rule) ->
                             val isProviderActive = !disabledProviderIds.contains(name)
 
                             BuiltInProviderCard(
@@ -276,7 +280,11 @@ fun RulesScreen(
                         contentPadding = PaddingValues(bottom = 220.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        items(customRules, key = { it.id }) { rule ->
+                        items(
+                            items = customRules,
+                            key = { it.id },
+                            contentType = { "custom_rule" }
+                        ) { rule ->
                             CustomRuleCard(
                                 rule = rule,
                                 onToggle = { enable ->
@@ -349,7 +357,7 @@ private fun BuiltInProviderCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         border = BorderStroke(
             1.dp,
             MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
@@ -464,7 +472,7 @@ private fun CustomRuleCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         border = BorderStroke(
             1.dp,
             MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
@@ -1010,9 +1018,13 @@ private fun extractDomainFromPattern(pattern: String, defaultName: String): Stri
     return match?.value ?: "$defaultName.com"
 }
 
+private val formattedNameCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+
 private fun formatProviderName(key: String): String {
-    return key.split("_", "-", " ")
-        .joinToString(" ") { word ->
-            word.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-        }
+    return formattedNameCache.getOrPut(key) {
+        key.split("_", "-", " ")
+            .joinToString(" ") { word ->
+                word.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+            }
+    }
 }
