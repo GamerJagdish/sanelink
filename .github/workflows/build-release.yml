@@ -2,6 +2,12 @@ name: Release SaneLink
 
 on:
   workflow_dispatch:
+    inputs:
+      force_release:
+        description: 'Force release even if app version is unchanged'
+        required: false
+        type: boolean
+        default: true
   push:
     branches:
       - main
@@ -23,7 +29,7 @@ jobs:
 
     steps:
       - name: Checkout Code Repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -49,14 +55,19 @@ jobs:
           echo "Previous version: $PREV_VERSION"
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual workflow dispatch trigger."
             echo "should_release=true" >> $GITHUB_OUTPUT
           elif [ -n "${{ github.ref_name }}" ] && [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "Git tag push trigger."
             echo "should_release=true" >> $GITHUB_OUTPUT
           elif [ -z "$PREV_VERSION" ]; then
+            echo "Initial commit or no previous version."
             echo "should_release=true" >> $GITHUB_OUTPUT
           elif [ "$CURRENT_VERSION" != "$PREV_VERSION" ]; then
+            echo "Version changed from $PREV_VERSION to $CURRENT_VERSION."
             echo "should_release=true" >> $GITHUB_OUTPUT
           else
+            echo "Version unchanged."
             echo "should_release=false" >> $GITHUB_OUTPUT
           fi
 
@@ -66,7 +77,7 @@ jobs:
 
       - name: Set up Java JDK 17
         if: steps.version_changed.outputs.should_release == 'true'
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -240,13 +251,13 @@ jobs:
 
       - name: Attest APK Artifacts
         if: steps.version_changed.outputs.should_release == 'true'
-        uses: actions/attest-build-provenance@v4
+        uses: actions/attest-build-provenance@v2
         with:
           subject-path: 'release_apks/*.apk'
 
       - name: Create or Update GitHub Release
         if: steps.version_changed.outputs.should_release == 'true'
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG_NAME }}
           name: ${{ env.TAG_NAME }}
