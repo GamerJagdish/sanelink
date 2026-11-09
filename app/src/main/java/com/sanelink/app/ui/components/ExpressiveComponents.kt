@@ -454,6 +454,15 @@ fun ExpressiveConnectedButtonGroup(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val totalCount = items.size
+    val interactionSources = remember(totalCount) {
+        List(totalCount) { MutableInteractionSource() }
+    }
+    val pressedStates = interactionSources.map { source ->
+        source.collectIsPressedAsState().value
+    }
+    val anyPressedIndex = pressedStates.indexOfFirst { it }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -461,21 +470,24 @@ fun ExpressiveConnectedButtonGroup(
         horizontalArrangement = Arrangement.spacedBy(2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val totalCount = items.size
         items.forEachIndexed { index, item ->
             val isSelected = selectedIndex == index
-            val interactionSource = remember { MutableInteractionSource() }
-            val isPressed by interactionSource.collectIsPressedAsState()
+            val interactionSource = interactionSources[index]
+            val isPressed = pressedStates[index]
 
-            // M3 Expressive Width Animation (Expanded Ratio ~ 15% with neighbor compression)
-            val expandedRatio = 0.15f
-            val targetWeight = if (isSelected) {
-                1f + (expandedRatio * (totalCount - 1))
+            // Dynamic M3 Expressive Spring Width Physics with real-time neighbor compression on touch
+            val pressDelta = when {
+                anyPressedIndex == index -> 0.12f * (totalCount - 1)
+                anyPressedIndex != -1 -> -0.12f
+                else -> 0f
+            }
+            val baseWeight = if (isSelected) {
+                1f + (0.15f * (totalCount - 1))
             } else {
-                1f - expandedRatio
+                1f - 0.15f
             }
             val animatedWeight by animateFloatAsState(
-                targetValue = targetWeight,
+                targetValue = baseWeight + pressDelta,
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioMediumBouncy,
                     stiffness = Spring.StiffnessMediumLow
@@ -513,15 +525,13 @@ fun ExpressiveConnectedButtonGroup(
                 label = "btnGroupContent_$index"
             )
 
-            // Shape morphing according to M3 Expressive Connected Button Group
-            // Full pill radius = 24.dp (half of 48.dp height)
-            // Inner connected radius = 6.dp
+            // Shape morphing: transforms to full pill on selection OR during touch press!
             val fullRadius = 24.dp
             val innerRadius = 6.dp
 
             val startRadius by animateDpAsState(
                 targetValue = when {
-                    isSelected -> fullRadius
+                    isSelected || isPressed -> fullRadius
                     index == 0 -> fullRadius // Leading outer left is rounded
                     else -> innerRadius // Non-leading left is connected
                 },
@@ -534,7 +544,7 @@ fun ExpressiveConnectedButtonGroup(
 
             val endRadius by animateDpAsState(
                 targetValue = when {
-                    isSelected -> fullRadius
+                    isSelected || isPressed -> fullRadius
                     index == totalCount - 1 -> fullRadius // Trailing outer right is rounded
                     else -> innerRadius // Non-trailing right is connected
                 },
@@ -561,13 +571,12 @@ fun ExpressiveConnectedButtonGroup(
                     }
                     .clip(shape)
                     .background(animatedBgColor)
-                    .selectable(
-                        selected = isSelected,
-                        onClick = { onSelect(index) },
-                        role = Role.Tab,
+                    .clickable(
                         interactionSource = interactionSource,
                         indication = ripple()
-                    )
+                    ) {
+                        onSelect(index)
+                    }
                     .padding(horizontal = 12.dp, vertical = 12.dp),
                 contentAlignment = Alignment.Center
             ) {
