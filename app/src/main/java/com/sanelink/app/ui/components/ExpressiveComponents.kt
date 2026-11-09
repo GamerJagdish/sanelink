@@ -988,3 +988,167 @@ fun ExpressiveFloatingButton(
         }
     }
 }
+
+
+/**
+ * Material 3 Expressive Leading Badge for list items.
+ *
+ * Standardized 42dp rounded squircle container for icons or initials/monograms.
+ */
+@Composable
+fun ExpressiveLeadingBadge(
+    modifier: Modifier = Modifier,
+    icon: Painter? = null,
+    monogram: String? = null,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.65f),
+    contentColor: Color = MaterialTheme.colorScheme.primary
+) {
+    Box(
+        modifier = modifier
+            .size(42.dp)
+            .clip(RoundedCornerShape(13.dp))
+            .background(containerColor),
+        contentAlignment = Alignment.Center
+    ) {
+        if (icon != null) {
+            Icon(
+                painter = icon,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(20.dp)
+            )
+        } else if (monogram != null) {
+            Text(
+                text = monogram.take(2).uppercase(),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = contentColor
+            )
+        }
+    }
+}
+
+/**
+ * Material 3 Expressive Segmented List Item.
+ *
+ * Implements M3 Expressive Segmented List specifications:
+ * - Position-aware connected geometry: rounded outer corners with connected 4dp inner corners
+ * - Tactile spring scale squash (0.98f) and corner morphing on touch press
+ * - Standardized slot architecture: leading, headline, supporting, and trailing slots
+ * - Accessible touch targets with min height constraints (56dp single-line, 72dp two-line)
+ */
+@Composable
+fun ExpressiveSegmentedListItem(
+    headline: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    supporting: @Composable (() -> Unit)? = null,
+    leading: @Composable (() -> Unit)? = null,
+    trailing: @Composable (() -> Unit)? = null,
+    index: Int = 0,
+    count: Int = 1,
+    onClick: (() -> Unit)? = null,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    enabled: Boolean = true
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    // Tactile press scale feedback with M3 Expressive bouncy spring
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed && onClick != null) 0.98f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "segmentedItemScale"
+    )
+
+    // Dynamic M3 Expressive shape morphing: inner connected corners flex on touch
+    val innerRadius by animateDpAsState(
+        targetValue = if (isPressed && onClick != null) 10.dp else 4.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "segmentedItemInnerRadius"
+    )
+
+    val outerRadius = 24.dp
+
+    val shape = when {
+        count <= 1 -> RoundedCornerShape(outerRadius)
+        index == 0 -> RoundedCornerShape(
+            topStart = outerRadius,
+            topEnd = outerRadius,
+            bottomStart = innerRadius,
+            bottomEnd = innerRadius
+        )
+        index == count - 1 -> RoundedCornerShape(
+            topStart = innerRadius,
+            topEnd = innerRadius,
+            bottomStart = outerRadius,
+            bottomEnd = outerRadius
+        )
+        else -> RoundedCornerShape(innerRadius)
+    }
+
+    val itemContent = @Composable {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = if (supporting != null) 72.dp else 56.dp)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (leading != null) {
+                leading()
+                Spacer(modifier = Modifier.width(14.dp))
+            }
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = if (trailing != null) 12.dp else 0.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                headline()
+                if (supporting != null) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    supporting()
+                }
+            }
+
+            if (trailing != null) {
+                trailing()
+            }
+        }
+    }
+
+    if (onClick != null) {
+        Surface(
+            onClick = onClick,
+            enabled = enabled,
+            shape = shape,
+            color = containerColor,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            interactionSource = interactionSource,
+            modifier = modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    scaleX = pressScale
+                    scaleY = pressScale
+                }
+        ) {
+            itemContent()
+        }
+    } else {
+        Surface(
+            shape = shape,
+            color = containerColor,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            modifier = modifier.fillMaxWidth()
+        ) {
+            itemContent()
+        }
+    }
+}
