@@ -139,7 +139,7 @@ fun SettingsScreen(
                     Column {
                         if (!isServiceEnabled) {
                             Text(
-                                text = "Android 10+ requires Accessibility Service permission to read copied links when the app is in the background.",
+                                text = "Android 10+ restricts background clipboard access to active foreground apps. While this service monitors window transitions to detect copied links, background reading may be blocked by system security. For guaranteed cleaning, use the Quick Settings tile, Share Sheet, or Text Selection menu.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
