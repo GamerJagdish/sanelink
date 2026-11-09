@@ -3,12 +3,16 @@ package com.sanelink.app.ui.components
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +25,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
@@ -36,14 +41,19 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -415,4 +425,220 @@ fun ExpressiveSandboxCard(
             }
         }
     }
+}
+
+/**
+ * Material 3 Expressive Connected Button Group item model.
+ */
+data class ExpressiveConnectedButtonItem(
+    val label: String,
+    val count: Int? = null,
+    val icon: Painter? = null
+)
+
+/**
+ * Material 3 Expressive Connected Button Group.
+ *
+ * Implements the official Material 3 Expressive specification replacing legacy Segmented Buttons.
+ * Connected buttons feature asymmetric rounded outer corners and straight inner edges when unselected,
+ * and dynamically morph into a standout, fully rounded pill shape when selected with spring animations.
+ */
+@Composable
+fun ExpressiveConnectedButtonGroup(
+    items: List<ExpressiveConnectedButtonItem>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(48.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val totalCount = items.size
+        items.forEachIndexed { index, item ->
+            val isSelected = selectedIndex == index
+            val interactionSource = remember { MutableInteractionSource() }
+            val isPressed by interactionSource.collectIsPressedAsState()
+
+            // M3 Expressive Width Animation (Expanded Ratio ~ 15% with neighbor compression)
+            val expandedRatio = 0.15f
+            val targetWeight = if (isSelected) {
+                1f + (expandedRatio * (totalCount - 1))
+            } else {
+                1f - expandedRatio
+            }
+            val animatedWeight by animateFloatAsState(
+                targetValue = targetWeight,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                ),
+                label = "btnGroupWeight_$index"
+            )
+
+            // Tactile press scale feedback (squish & bounce)
+            val pressScale by animateFloatAsState(
+                targetValue = if (isPressed) 0.96f else 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                ),
+                label = "btnGroupPressScale_$index"
+            )
+
+            val animatedBgColor by animateColorAsState(
+                targetValue = if (isSelected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerHigh
+                },
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                label = "btnGroupBg_$index"
+            )
+
+            val contentColor by animateColorAsState(
+                targetValue = if (isSelected) {
+                    MaterialTheme.colorScheme.onPrimary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                label = "btnGroupContent_$index"
+            )
+
+            // Shape morphing according to M3 Expressive Connected Button Group
+            // Full pill radius = 24.dp (half of 48.dp height)
+            // Inner connected radius = 6.dp
+            val fullRadius = 24.dp
+            val innerRadius = 6.dp
+
+            val startRadius by animateDpAsState(
+                targetValue = when {
+                    isSelected -> fullRadius
+                    index == 0 -> fullRadius // Leading outer left is rounded
+                    else -> innerRadius // Non-leading left is connected
+                },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                ),
+                label = "startRadius_$index"
+            )
+
+            val endRadius by animateDpAsState(
+                targetValue = when {
+                    isSelected -> fullRadius
+                    index == totalCount - 1 -> fullRadius // Trailing outer right is rounded
+                    else -> innerRadius // Non-trailing right is connected
+                },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                ),
+                label = "endRadius_$index"
+            )
+
+            val shape = RoundedCornerShape(
+                topStart = startRadius,
+                bottomStart = startRadius,
+                topEnd = endRadius,
+                bottomEnd = endRadius
+            )
+
+            Box(
+                modifier = Modifier
+                    .weight(animatedWeight)
+                    .graphicsLayer {
+                        scaleX = pressScale
+                        scaleY = pressScale
+                    }
+                    .clip(shape)
+                    .background(animatedBgColor)
+                    .selectable(
+                        selected = isSelected,
+                        onClick = { onSelect(index) },
+                        role = Role.Tab,
+                        interactionSource = interactionSource,
+                        indication = ripple()
+                    )
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    if (item.icon != null) {
+                        Icon(
+                            painter = item.icon,
+                            contentDescription = null,
+                            tint = contentColor,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
+                    Text(
+                        text = item.label,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                        color = contentColor
+                    )
+                    if (item.count != null) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        val badgeScale by animateFloatAsState(
+                            targetValue = if (isSelected) 1.05f else 1f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            ),
+                            label = "badgeScale_$index"
+                        )
+                        Box(
+                            modifier = Modifier
+                                .graphicsLayer {
+                                    scaleX = badgeScale
+                                    scaleY = badgeScale
+                                }
+                                .clip(RoundedCornerShape(percent = 50))
+                                .background(
+                                    if (isSelected) {
+                                        MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.22f)
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceContainerHighest
+                                    }
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "${item.count}",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = contentColor
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@JvmName("ExpressiveConnectedButtonGroupFromStrings")
+@Composable
+fun ExpressiveConnectedButtonGroup(
+    options: List<String>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    ExpressiveConnectedButtonGroup(
+        items = options.map { ExpressiveConnectedButtonItem(label = it) },
+        selectedIndex = selectedIndex,
+        onSelect = onSelect,
+        modifier = modifier
+    )
 }

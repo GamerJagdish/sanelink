@@ -36,9 +36,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -66,6 +63,8 @@ import com.sanelink.app.R
 import com.sanelink.app.SaneLinkApp
 import com.sanelink.app.core.model.CustomRule
 import com.sanelink.app.core.model.ProviderRule
+import com.sanelink.app.ui.components.ExpressiveConnectedButtonGroup
+import com.sanelink.app.ui.components.ExpressiveConnectedButtonItem
 import com.sanelink.app.ui.components.ExpressiveSwitch
 import com.sanelink.app.ui.theme.CleanBadgeBg
 import com.sanelink.app.ui.theme.CleanBadgeText
@@ -116,31 +115,22 @@ fun RulesScreen(
             .padding(horizontal = 20.dp)
             .padding(top = 12.dp)
     ) {
-        // Tab Segmented Button: Built-in vs Custom
-        SingleChoiceSegmentedButtonRow(
+        // Material 3 Expressive Connected Button Group: Built-in vs Custom
+        ExpressiveConnectedButtonGroup(
+            items = listOf(
+                ExpressiveConnectedButtonItem(
+                    label = "Built-in",
+                    count = clearUrlsData.providers.size
+                ),
+                ExpressiveConnectedButtonItem(
+                    label = "Custom",
+                    count = customRules.size
+                )
+            ),
+            selectedIndex = selectedSubTab,
+            onSelect = onSubTabChanged,
             modifier = Modifier.fillMaxWidth()
-        ) {
-            SegmentedButton(
-                selected = selectedSubTab == 0,
-                onClick = { onSubTabChanged(0) },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
-            ) {
-                Text(
-                    "Built-in (${clearUrlsData.providers.size})",
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            SegmentedButton(
-                selected = selectedSubTab == 1,
-                onClick = { onSubTabChanged(1) },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-            ) {
-                Text(
-                    "Custom (${customRules.size})",
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        }
+        )
 
         Spacer(modifier = Modifier.height(14.dp))
 
