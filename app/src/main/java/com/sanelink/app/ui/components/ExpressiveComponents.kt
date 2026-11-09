@@ -728,3 +728,142 @@ fun ExpressiveSearchBar(
             .height(56.dp)
     )
 }
+
+/**
+ * Material 3 Expressive Connected Icon Button Group.
+ *
+ * Implements the Material 3 Expressive Icon Button Group specification with connected outer-rounded /
+ * inner-flat geometry, real-time neighbor compression, tactile press scale feedback, and spring motion physics.
+ */
+@Composable
+fun ExpressiveConnectedIconButtonGroup(
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val editInteractionSource = remember { MutableInteractionSource() }
+    val isEditPressed by editInteractionSource.collectIsPressedAsState()
+
+    val deleteInteractionSource = remember { MutableInteractionSource() }
+    val isDeletePressed by deleteInteractionSource.collectIsPressedAsState()
+
+    // Real-time neighbor width compression with spring physics
+    val editWidth by animateDpAsState(
+        targetValue = when {
+            isEditPressed -> 44.dp
+            isDeletePressed -> 34.dp
+            else -> 38.dp
+        },
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "editWidth"
+    )
+
+    val deleteWidth by animateDpAsState(
+        targetValue = when {
+            isDeletePressed -> 44.dp
+            isEditPressed -> 34.dp
+            else -> 38.dp
+        },
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "deleteWidth"
+    )
+
+    // Tactile press scale (squish & bounce)
+    val editPressScale by animateFloatAsState(
+        targetValue = if (isEditPressed) 0.94f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "editPressScale"
+    )
+
+    val deletePressScale by animateFloatAsState(
+        targetValue = if (isDeletePressed) 0.94f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "deletePressScale"
+    )
+
+    // Shapes: 18dp outer, 4dp connected inner
+    val editShape = RoundedCornerShape(
+        topStart = 18.dp,
+        bottomStart = 18.dp,
+        topEnd = 4.dp,
+        bottomEnd = 4.dp
+    )
+    val deleteShape = RoundedCornerShape(
+        topStart = 4.dp,
+        bottomStart = 4.dp,
+        topEnd = 18.dp,
+        bottomEnd = 18.dp
+    )
+
+    Row(
+        modifier = modifier.height(38.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Edit Action
+        Box(
+            modifier = Modifier
+                .width(editWidth)
+                .height(38.dp)
+                .graphicsLayer {
+                    scaleX = editPressScale
+                    scaleY = editPressScale
+                }
+                .clip(editShape)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .clickable(
+                    interactionSource = editInteractionSource,
+                    indication = ripple()
+                ) {
+                    onEdit()
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_edit),
+                contentDescription = "Edit rule",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+
+        // Delete Action
+        Box(
+            modifier = Modifier
+                .width(deleteWidth)
+                .height(38.dp)
+                .graphicsLayer {
+                    scaleX = deletePressScale
+                    scaleY = deletePressScale
+                }
+                .clip(deleteShape)
+                .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f))
+                .clickable(
+                    interactionSource = deleteInteractionSource,
+                    indication = ripple(color = MaterialTheme.colorScheme.error)
+                ) {
+                    onDelete()
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_delete),
+                contentDescription = "Delete rule",
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}

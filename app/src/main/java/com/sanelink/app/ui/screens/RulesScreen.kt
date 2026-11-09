@@ -65,6 +65,7 @@ import com.sanelink.app.core.model.CustomRule
 import com.sanelink.app.core.model.ProviderRule
 import com.sanelink.app.ui.components.ExpressiveConnectedButtonGroup
 import com.sanelink.app.ui.components.ExpressiveConnectedButtonItem
+import com.sanelink.app.ui.components.ExpressiveConnectedIconButtonGroup
 import com.sanelink.app.ui.components.ExpressiveSearchBar
 import com.sanelink.app.ui.components.ExpressiveSwitch
 import com.sanelink.app.ui.theme.CleanBadgeBg
@@ -649,45 +650,11 @@ private fun CustomRuleCard(
                         onCheckedChange = onToggle
                     )
 
-                    // Merged Button: Edit | Delete
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.6f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(
-                                onClick = onEdit,
-                                modifier = Modifier.size(36.dp)
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_edit),
-                                    contentDescription = "Edit",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .width(1.dp)
-                                    .height(18.dp)
-                                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-                            )
-                            IconButton(
-                                onClick = onDelete,
-                                modifier = Modifier.size(36.dp)
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_delete),
-                                    contentDescription = "Delete",
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                    }
+                    // M3 Expressive Connected Icon Button Group: Edit | Delete
+                    ExpressiveConnectedIconButtonGroup(
+                        onEdit = onEdit,
+                        onDelete = onDelete
+                    )
                 }
             }
         }
