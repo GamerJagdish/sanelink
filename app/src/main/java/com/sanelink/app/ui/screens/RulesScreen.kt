@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -62,7 +63,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -78,10 +78,7 @@ import com.sanelink.app.ui.components.ExpressiveFloatingButton
 import com.sanelink.app.ui.components.ExpressiveSearchBar
 import com.sanelink.app.ui.components.ExpressiveSwitch
 import com.sanelink.app.ui.components.LocalHazeState
-import com.sanelink.app.ui.theme.CleanBadgeBg
-import com.sanelink.app.ui.theme.CleanBadgeText
-import com.sanelink.app.ui.theme.TrackerBadgeBg
-import com.sanelink.app.ui.theme.TrackerBadgeText
+import com.sanelink.app.ui.theme.GoogleSansCode
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
 
@@ -527,7 +524,13 @@ private fun BuiltInProviderCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (isActive) 0.5f else 0.25f))
+                                .background(
+                                    if (isActive) {
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
+                                    }
+                                )
                                 .padding(horizontal = 7.dp, vertical = 2.dp)
                         ) {
                             Text(
@@ -535,7 +538,11 @@ private fun BuiltInProviderCard(
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 11.sp,
-                                color = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.outline
+                                color = if (isActive) {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+                                }
                             )
                         }
                     }
@@ -544,7 +551,13 @@ private fun BuiltInProviderCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(if (isActive) CleanBadgeBg else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                                .background(
+                                    if (isActive) {
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
+                                    }
+                                )
                                 .padding(horizontal = 7.dp, vertical = 2.dp)
                         ) {
                             Text(
@@ -552,7 +565,11 @@ private fun BuiltInProviderCard(
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 11.sp,
-                                color = if (isActive) CleanBadgeText else MaterialTheme.colorScheme.outline
+                                color = if (isActive) {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+                                }
                             )
                         }
                     }
@@ -561,14 +578,25 @@ private fun BuiltInProviderCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isActive) 0.7f else 0.35f))
+                                .background(
+                                    if (isActive) {
+                                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
+                                    }
+                                )
                                 .padding(horizontal = 7.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = "Cleans Path",
                                 style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
                                 fontSize = 11.sp,
-                                color = if (isActive) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.outline
+                                color = if (isActive) {
+                                    MaterialTheme.colorScheme.onSecondaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+                                }
                             )
                         }
                     }
@@ -678,9 +706,12 @@ private fun CustomRuleCard(
                     )
                     Text(
                         text = rule.urlPattern,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = GoogleSansCode,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = 0.2.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.88f)
                     )
 
                     // Frontend Rewrite preview
@@ -690,21 +721,37 @@ private fun CustomRuleCard(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(if (rule.isEnabled) CleanBadgeBg else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                                .background(
+                                    if (rule.isEnabled) {
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.6f)
+                                    }
+                                )
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_swap_horiz),
                                 contentDescription = null,
-                                tint = if (rule.isEnabled) CleanBadgeText else MaterialTheme.colorScheme.outline,
+                                tint = if (rule.isEnabled) {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+                                },
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = "Rewrites to: ${rule.rewriteReplacement}",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (rule.isEnabled) CleanBadgeText else MaterialTheme.colorScheme.outline
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontFamily = GoogleSansCode,
+                                    fontWeight = FontWeight.SemiBold
+                                ),
+                                color = if (rule.isEnabled) {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+                                }
                             )
                         }
                     }
@@ -720,15 +767,26 @@ private fun CustomRuleCard(
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(6.dp))
-                                        .background(if (rule.isEnabled) TrackerBadgeBg else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                                        .background(
+                                            if (rule.isEnabled) {
+                                                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.65f)
+                                            } else {
+                                                MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
+                                            }
+                                        )
                                         .padding(horizontal = 8.dp, vertical = 2.dp)
                                 ) {
                                     Text(
                                         text = param,
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontFamily = FontFamily.Monospace,
+                                        fontFamily = GoogleSansCode,
+                                        fontWeight = FontWeight.SemiBold,
                                         fontSize = 11.sp,
-                                        color = if (rule.isEnabled) TrackerBadgeText else MaterialTheme.colorScheme.outline
+                                        color = if (rule.isEnabled) {
+                                            MaterialTheme.colorScheme.onErrorContainer
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+                                        }
                                     )
                                 }
                             }
@@ -861,7 +919,10 @@ private fun RulePreviewBottomSheet(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         maxLines = 3,
-                        textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(
+                            fontFamily = GoogleSansCode,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -871,22 +932,30 @@ private fun RulePreviewBottomSheet(
                             text = "CONVERTED RESULT",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = CleanBadgeText,
+                            color = MaterialTheme.colorScheme.primary,
                             letterSpacing = 1.sp
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(CleanBadgeBg)
-                                .padding(10.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f))
+                                .border(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .padding(12.dp)
                         ) {
                             Text(
                                 text = testResult.cleanText,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontFamily = FontFamily.Monospace,
-                                color = CleanBadgeText
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontFamily = GoogleSansCode,
+                                    fontWeight = FontWeight.Medium,
+                                    letterSpacing = 0.2.sp
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
 
@@ -900,15 +969,16 @@ private fun RulePreviewBottomSheet(
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(6.dp))
-                                            .background(TrackerBadgeBg)
-                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f))
+                                            .padding(horizontal = 7.dp, vertical = 2.dp)
                                     ) {
                                         Text(
                                             text = "-$p",
                                             style = MaterialTheme.typography.labelSmall,
-                                            fontFamily = FontFamily.Monospace,
-                                            fontSize = 10.sp,
-                                            color = TrackerBadgeText
+                                            fontFamily = GoogleSansCode,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onErrorContainer
                                         )
                                     }
                                 }
@@ -917,9 +987,11 @@ private fun RulePreviewBottomSheet(
                     } else {
                         Text(
                             text = "URL is clean / No parameters removed",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            fontFamily = FontFamily.Monospace
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontFamily = GoogleSansCode,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -940,14 +1012,22 @@ private fun RulePreviewBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                        RoundedCornerShape(12.dp)
+                    )
                     .padding(12.dp)
             ) {
                 Text(
                     text = rule.urlPattern,
-                    fontFamily = FontFamily.Monospace,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    fontFamily = GoogleSansCode,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 0.2.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
@@ -971,14 +1051,16 @@ private fun RulePreviewBottomSheet(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(TrackerBadgeBg)
+                                .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f))
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
                                 text = param,
                                 style = MaterialTheme.typography.labelSmall,
-                                fontFamily = FontFamily.Monospace,
-                                color = TrackerBadgeText
+                                fontFamily = GoogleSansCode,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onErrorContainer
                             )
                         }
                     }
@@ -1002,14 +1084,19 @@ private fun RulePreviewBottomSheet(
                             .fillMaxWidth()
                             .padding(vertical = 2.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f))
+                            .border(
+                                1.dp,
+                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f),
+                                RoundedCornerShape(8.dp)
+                            )
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Text(
                             text = raw,
-                            fontFamily = FontFamily.Monospace,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            fontFamily = GoogleSansCode,
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
                 }
@@ -1022,7 +1109,7 @@ private fun RulePreviewBottomSheet(
                     text = "REDIRECTION UNWRAPPING",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = CleanBadgeText,
+                    color = MaterialTheme.colorScheme.primary,
                     letterSpacing = 1.sp
                 )
                 Spacer(modifier = Modifier.height(6.dp))
@@ -1032,14 +1119,19 @@ private fun RulePreviewBottomSheet(
                             .fillMaxWidth()
                             .padding(vertical = 2.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(CleanBadgeBg)
+                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
+                            .border(
+                                1.dp,
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
+                                RoundedCornerShape(8.dp)
+                            )
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Text(
                             text = redir,
-                            fontFamily = FontFamily.Monospace,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = CleanBadgeText
+                            fontFamily = GoogleSansCode,
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                 }
@@ -1062,14 +1154,19 @@ private fun RulePreviewBottomSheet(
                             .fillMaxWidth()
                             .padding(vertical = 2.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .border(
+                                1.dp,
+                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                                RoundedCornerShape(8.dp)
+                            )
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Text(
                             text = exc,
-                            fontFamily = FontFamily.Monospace,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            fontFamily = GoogleSansCode,
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }

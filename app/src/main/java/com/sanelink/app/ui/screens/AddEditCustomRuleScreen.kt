@@ -56,6 +56,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sanelink.app.core.model.CustomRule
+import com.sanelink.app.ui.theme.GoogleSansCode
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -359,6 +360,10 @@ fun AddEditCustomRuleScreen(
                 onValueChange = { urlPattern = it },
                 label = { Text("URL / Domain Pattern (Regex)") },
                 placeholder = { Text("e.g. ^https?://(?:www\\.)?reddit\\.com") },
+                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                    fontFamily = GoogleSansCode,
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
                 shape = RoundedCornerShape(16.dp),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
@@ -373,6 +378,10 @@ fun AddEditCustomRuleScreen(
                 onValueChange = { stripParams = it },
                 label = { Text("Parameters to Strip (comma-separated)") },
                 placeholder = { Text("e.g. utm_source, share_id, rdt") },
+                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                    fontFamily = GoogleSansCode,
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
                 shape = RoundedCornerShape(16.dp),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 modifier = Modifier.fillMaxWidth()
@@ -396,6 +405,10 @@ fun AddEditCustomRuleScreen(
                 onValueChange = { rewritePattern = it },
                 label = { Text("Frontend Match Regex") },
                 placeholder = { Text("e.g. ^https?://(?:www\\.)?reddit\\.com/(.*)") },
+                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                    fontFamily = GoogleSansCode,
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
                 shape = RoundedCornerShape(16.dp),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
@@ -410,6 +423,10 @@ fun AddEditCustomRuleScreen(
                 onValueChange = { rewriteReplacement = it },
                 label = { Text("Frontend Replacement Target") },
                 placeholder = { Text("e.g. https://redlib.catsarch.com/$1") },
+                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                    fontFamily = GoogleSansCode,
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
                 shape = RoundedCornerShape(16.dp),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),

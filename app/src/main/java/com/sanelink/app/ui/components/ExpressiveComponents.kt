@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -61,7 +62,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -76,10 +76,7 @@ import dev.chrisbanes.haze.hazeSource
 import com.sanelink.app.R
 import com.sanelink.app.core.model.SanitizationStats
 import com.sanelink.app.core.model.SanitizerResult
-import com.sanelink.app.ui.theme.CleanBadgeBg
-import com.sanelink.app.ui.theme.CleanBadgeText
-import com.sanelink.app.ui.theme.TrackerBadgeBg
-import com.sanelink.app.ui.theme.TrackerBadgeText
+import com.sanelink.app.ui.theme.GoogleSansCode
 
 @Composable
 fun ExpressiveSwitch(
@@ -331,6 +328,10 @@ fun ExpressiveSandboxCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     )
                 },
+                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                    fontFamily = GoogleSansCode,
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
                 maxLines = 3,
@@ -367,16 +368,16 @@ fun ExpressiveSandboxCard(
                             result.removedParameters.forEach { param ->
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(TrackerBadgeBg)
-                                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f))
+                                        .padding(horizontal = 9.dp, vertical = 3.dp)
                                 ) {
                                     Text(
                                         text = param,
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontFamily = FontFamily.Monospace,
+                                        fontFamily = GoogleSansCode,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = TrackerBadgeText
+                                        color = MaterialTheme.colorScheme.onErrorContainer
                                     )
                                 }
                             }
@@ -401,15 +402,22 @@ fun ExpressiveSandboxCard(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(CleanBadgeBg)
-                                .padding(12.dp)
+                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f))
+                                .border(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                                    RoundedCornerShape(16.dp)
+                                )
+                                .padding(14.dp)
                         ) {
                             Text(
                                 text = result.cleanText,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontFamily = FontFamily.Monospace,
-                                color = CleanBadgeText,
-                                fontWeight = FontWeight.Medium
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontFamily = GoogleSansCode,
+                                    fontWeight = FontWeight.Medium,
+                                    letterSpacing = 0.2.sp
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
 
