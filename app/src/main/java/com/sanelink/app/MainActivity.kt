@@ -1,7 +1,15 @@
 package com.sanelink.app
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
@@ -56,13 +64,23 @@ import com.sanelink.app.ui.screens.HomeScreen
 import com.sanelink.app.ui.screens.RulesScreen
 import com.sanelink.app.ui.screens.SettingsScreen
 import com.sanelink.app.ui.theme.SaneLinkTheme
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
+    companion object {
+        const val EXTRA_QUICK_CLEAN = "com.sanelink.app.EXTRA_QUICK_CLEAN"
+    }
+
+    private var isQuickCleaning = false
+    private var quickCleanExecuted = false
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        checkQuickCleanIntent(intent)
         
         // True edge-to-edge with transparent bars and zero OS contrast scrim
         enableEdgeToEdge(
@@ -239,4 +257,92 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        checkQuickCleanIntent(intent)
+    }
+
+    private fun checkQuickCleanIntent(intent: Intent?) {
+        if (intent?.getBooleanExtra(EXTRA_QUICK_CLEAN, false) == true) {
+            isQuickCleaning = true
+            quickCleanExecuted = false
+            if (hasWindowFocus()) {
+                quickCleanExecuted = true
+                performQuickClean()
+            }
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && isQuickCleaning && !quickCleanExecuted) {
+            quickCleanExecuted = true
+            performQuickClean()
+        }
+    }
+
+    private fun performQuickClean() {
+        lifecycleScope.launch {
+            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+            val clip = cm?.primaryClip
+            val text = if (clip != null && clip.itemCount > 0) clip.getItemAt(0)?.text?.toString() else null
+
+            if (!text.isNullOrBlank()) {
+                val app = SaneLinkApp.instance
+                val sanitizer = app.repository.getSanitizer()
+                val result = sanitizer.sanitize(text)
+
+                if (result.wasModified && result.cleanText != text) {
+                    val newClip = ClipData.newPlainText("sanitized_url", result.cleanText)
+                    cm?.setPrimaryClip(newClip)
+
+                    app.preferences.recordSanitization(result.removedParameters.size)
+
+                    if (app.preferences.hapticFeedbackEnabled.first()) {
+                        triggerHaptic()
+                    }
+                    if (app.preferences.showToastEnabled.first()) {
+                        val count = result.removedParameters.size
+                        val msg = if (count > 0) {
+                            "Cleaned! Removed $count tracker${if (count > 1) "s" else ""}"
+                        } else {
+                            "Clean link copied to clipboard"
+                        }
+                        Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    if (app.preferences.showToastEnabled.first()) {
+                        Toast.makeText(this@MainActivity, "No tracking links found", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } else {
+                if (SaneLinkApp.instance.preferences.showToastEnabled.first()) {
+                    Toast.makeText(this@MainActivity, "No tracking links found", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            moveTaskToBack(true)
+            finish()
+        }
+    }
+
+    private fun triggerHaptic() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+                vibratorManager?.defaultVibrator?.vibrate(
+                    VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK)
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(35)
+            }
+        } catch (_: Exception) {
+            // Ignore if vibration unavailable
+        }
+    }
 }
