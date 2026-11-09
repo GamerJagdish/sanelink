@@ -1,10 +1,16 @@
 package com.sanelink.app.ui.screens
 
+import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.provider.Settings
+import android.view.accessibility.AccessibilityManager
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,16 +26,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,8 +46,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.sanelink.app.R
 import com.sanelink.app.SaneLinkApp
+import com.sanelink.app.service.ClipboardAccessibilityService
+import com.sanelink.app.ui.components.ExpressiveLeadingBadge
+import com.sanelink.app.ui.components.ExpressiveSegmentedListItem
 import com.sanelink.app.ui.components.ExpressiveSwitch
 import com.sanelink.app.ui.components.LocalHazeState
 import dev.chrisbanes.haze.hazeSource
@@ -59,6 +69,21 @@ fun SettingsScreen(
     val hazeState = LocalHazeState.current
 
     var showAboutDialog by remember { mutableStateOf(false) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var isServiceEnabled by remember { mutableStateOf(isAccessibilityServiceEnabled(context)) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isServiceEnabled = isAccessibilityServiceEnabled(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     val hapticEnabled by app.preferences.hapticFeedbackEnabled.collectAsState(initial = true)
     val toastEnabled by app.preferences.showToastEnabled.collectAsState(initial = true)
@@ -89,108 +114,7 @@ fun SettingsScreen(
             .padding(top = 12.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // Group 1: Preferences (Gboard Connected Container)
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = "Preferences",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 12.dp)
-            )
-
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                border = BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column {
-                    // Haptic Feedback Row
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                scope.launch { app.preferences.setHapticFeedback(!hapticEnabled) }
-                            }
-                            .padding(horizontal = 20.dp, vertical = 18.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(end = 16.dp)
-                        ) {
-                            Text(
-                                text = "Haptic feedback",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Vibrate when tracking parameters are stripped",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        ExpressiveSwitch(
-                            checked = hapticEnabled,
-                            onCheckedChange = { scope.launch { app.preferences.setHapticFeedback(it) } }
-                        )
-                    }
-
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
-                        modifier = Modifier.padding(horizontal = 20.dp)
-                    )
-
-                    // Toast Notification Row
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                scope.launch { app.preferences.setShowToast(!toastEnabled) }
-                            }
-                            .padding(horizontal = 20.dp, vertical = 18.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(end = 16.dp)
-                        ) {
-                            Text(
-                                text = "Toast notification",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Show on-screen alert when a link is cleaned",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        ExpressiveSwitch(
-                            checked = toastEnabled,
-                            onCheckedChange = { scope.launch { app.preferences.setShowToast(it) } }
-                        )
-                    }
-                }
-            }
-        }
-
-        // Group 2: System Background Protection
+        // Group 1: System Background Protection (Material 3 Expressive Segmented Container)
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
                 text = "System",
@@ -200,57 +124,140 @@ fun SettingsScreen(
                 modifier = Modifier.padding(start = 12.dp)
             )
 
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                border = BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+            ExpressiveSegmentedListItem(
+                index = 0,
+                count = 1,
+                headline = {
                     Text(
                         text = "Background Auto-Sanitize",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+                },
+                supporting = {
+                    Column {
+                        if (!isServiceEnabled) {
+                            Text(
+                                text = "Android 10+ requires Accessibility Service permission to read copied links when the app is in the background.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(14.dp))
+                        }
 
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = "Android 10+ requires Accessibility Service permission to read copied links when the app is in the background.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    FilledTonalButton(
-                        onClick = {
-                            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                            context.startActivity(intent)
-                        },
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Configure in System Settings")
-                        Spacer(modifier = Modifier.size(8.dp))
-                        Icon(
-                            painter = painterResource(R.drawable.ic_open_in_new),
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
+                        FilledTonalButton(
+                            onClick = {
+                                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                context.startActivity(intent)
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (isServiceEnabled) "Setup Done" else "Configure in System Settings")
+                            Spacer(modifier = Modifier.size(8.dp))
+                            Icon(
+                                painter = painterResource(if (isServiceEnabled) R.drawable.ic_check else R.drawable.ic_open_in_new),
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
+            )
+        }
+
+        // Group 2: Preferences (Material 3 Expressive Segmented Container)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "Preferences",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 12.dp)
+            )
+
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                val onToggleHaptic: (Boolean) -> Unit = { enabled ->
+                    scope.launch { app.preferences.setHapticFeedback(enabled) }
+                    if (enabled) {
+                        triggerHapticFeedback(context)
+                    }
+                }
+
+                // Haptic Feedback Row
+                ExpressiveSegmentedListItem(
+                    index = 0,
+                    count = 2,
+                    leading = {
+                        ExpressiveLeadingBadge(
+                            icon = painterResource(R.drawable.ic_vibration)
+                        )
+                    },
+                    headline = {
+                        Text(
+                            text = "Haptic feedback",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    },
+                    supporting = {
+                        Text(
+                            text = "Vibrate when tracking parameters are stripped",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    trailing = {
+                        ExpressiveSwitch(
+                            checked = hapticEnabled,
+                            onCheckedChange = onToggleHaptic
+                        )
+                    },
+                    onClick = {
+                        onToggleHaptic(!hapticEnabled)
+                    }
+                )
+
+                // Toast Notification Row
+                ExpressiveSegmentedListItem(
+                    index = 1,
+                    count = 2,
+                    leading = {
+                        ExpressiveLeadingBadge(
+                            icon = painterResource(R.drawable.ic_notifications)
+                        )
+                    },
+                    headline = {
+                        Text(
+                            text = "Toast notification",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    },
+                    supporting = {
+                        Text(
+                            text = "Show on-screen alert when a link is cleaned",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    trailing = {
+                        ExpressiveSwitch(
+                            checked = toastEnabled,
+                            onCheckedChange = { scope.launch { app.preferences.setShowToast(it) } }
+                        )
+                    },
+                    onClick = {
+                        scope.launch { app.preferences.setShowToast(!toastEnabled) }
+                    }
+                )
             }
         }
 
-        // Group 3: About & Info
+        // Group 3: About & Info (Material 3 Expressive Segmented Container)
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
                 text = "About",
@@ -260,73 +267,53 @@ fun SettingsScreen(
                 modifier = Modifier.padding(start = 12.dp)
             )
 
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                border = BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column {
-                    // About SaneLink Row
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showAboutDialog = true }
-                            .padding(horizontal = 20.dp, vertical = 18.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(end = 16.dp)
-                        ) {
-                            Text(
-                                text = "About SaneLink",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Developer, license, and open-source project info",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                // About SaneLink Row
+                ExpressiveSegmentedListItem(
+                    index = 0,
+                    count = 2,
+                    leading = {
+                        ExpressiveLeadingBadge(
+                            icon = painterResource(R.drawable.ic_info)
+                        )
+                    },
+                    headline = {
+                        Text(
+                            text = "About SaneLink",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    },
+                    trailing = {
                         Icon(
                             painter = painterResource(R.drawable.ic_chevron_right),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
                         )
-                    }
+                    },
+                    onClick = { showAboutDialog = true }
+                )
 
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
-                        modifier = Modifier.padding(horizontal = 20.dp)
-                    )
-
-                    // Version Row
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 18.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
+                // Version Row
+                ExpressiveSegmentedListItem(
+                    index = 1,
+                    count = 2,
+                    leading = {
+                        ExpressiveLeadingBadge(
+                            icon = painterResource(R.drawable.ic_code)
+                        )
+                    },
+                    headline = {
                         Text(
                             text = "Version",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
+                    },
+                    trailing = {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
@@ -340,7 +327,7 @@ fun SettingsScreen(
                             )
                         }
                     }
-                }
+                )
             }
         }
 
@@ -482,4 +469,39 @@ fun SettingsScreen(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     }
+}
+
+private fun triggerHapticFeedback(context: Context) {
+    try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+            vibratorManager?.defaultVibrator?.vibrate(
+                VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK)
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            @Suppress("DEPRECATION")
+            vibrator?.vibrate(30)
+        }
+    } catch (_: Exception) {
+        // Non-critical if vibration unavailable
+    }
+}
+
+private fun isAccessibilityServiceEnabled(context: Context): Boolean {
+    val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
+    val enabledServices = am?.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+    val enabledByManager = enabledServices?.any {
+        it.resolveInfo.serviceInfo.packageName == context.packageName &&
+            it.resolveInfo.serviceInfo.name == ClipboardAccessibilityService::class.java.name
+    } == true
+    if (enabledByManager) return true
+
+    val expectedComponentName = "${context.packageName}/${ClipboardAccessibilityService::class.java.name}"
+    val enabledString = Settings.Secure.getString(
+        context.contentResolver,
+        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+    ) ?: return false
+    return enabledString.split(":").any { it.equals(expectedComponentName, ignoreCase = true) }
 }
