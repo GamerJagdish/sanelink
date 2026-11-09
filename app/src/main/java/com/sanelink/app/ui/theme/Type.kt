@@ -14,6 +14,13 @@ val GoogleSans = FontFamily(
     Font(R.font.google_sans_bold, FontWeight.Bold)
 )
 
+val GoogleSansCode = FontFamily(
+    Font(R.font.google_sans_code, FontWeight.Normal),
+    Font(R.font.google_sans_code, FontWeight.Medium),
+    Font(R.font.google_sans_code, FontWeight.SemiBold),
+    Font(R.font.google_sans_code, FontWeight.Bold)
+)
+
 val AppTypography = Typography(
     displayLarge = TextStyle(
         fontFamily = GoogleSans,
