@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -39,6 +40,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -864,6 +866,106 @@ fun ExpressiveConnectedIconButtonGroup(
                 tint = MaterialTheme.colorScheme.error,
                 modifier = Modifier.size(18.dp)
             )
+        }
+    }
+}
+
+/**
+ * Material 3 Expressive Floating Action and Primary Pill Button
+ *
+ * Implements Material 3 Expressive specifications and motion mechanics:
+ * - Dynamic shape morphing from resting full pill (26dp) into subtle squircle (18dp) on touch
+ * - Bouncy spring scale squash and recovery (0.96f scale on press)
+ * - Spring elevation dynamics with 6dp resting to 12dp pressed
+ * - Instantaneous touch-down tracking using interactionSource and collectIsPressedAsState
+ * - High-emphasis filled primary container with optional leading icon
+ */
+@Composable
+fun ExpressiveFloatingButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: Painter? = null,
+    containerColor: Color = MaterialTheme.colorScheme.primary,
+    contentColor: Color = MaterialTheme.colorScheme.onPrimary,
+    enabled: Boolean = true
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    // Tactile press scale feedback with M3 Expressive bouncy spring
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "floatingBtnScale"
+    )
+
+    // Dynamic M3 Expressive shape morphing: from smooth pill (26dp) to subtle squircle (18dp) on touch
+    val cornerRadius by animateDpAsState(
+        targetValue = if (isPressed) 18.dp else 26.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "floatingBtnCornerRadius"
+    )
+
+    // Dynamic M3 Expressive spring elevation
+    val elevation by animateDpAsState(
+        targetValue = if (isPressed) 12.dp else 6.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "floatingBtnElevation"
+    )
+
+    val shape = RoundedCornerShape(cornerRadius)
+
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        shape = shape,
+        color = containerColor,
+        contentColor = contentColor,
+        shadowElevation = elevation,
+        interactionSource = interactionSource,
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 52.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                if (icon != null) {
+                    Icon(
+                        painter = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = contentColor
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                }
+                Text(
+                    text = text,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = contentColor
+                )
+            }
         }
     }
 }

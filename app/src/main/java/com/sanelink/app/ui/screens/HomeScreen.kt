@@ -16,8 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,10 +28,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sanelink.app.R
 import com.sanelink.app.SaneLinkApp
 import com.sanelink.app.core.model.SanitizationStats
+import com.sanelink.app.ui.components.ExpressiveFloatingButton
 import com.sanelink.app.ui.components.ExpressiveSandboxCard
 import com.sanelink.app.ui.components.ExpressiveStatsRow
 import com.sanelink.app.ui.components.HeroProtectionCard
@@ -95,8 +96,9 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(200.dp))
         }
 
-        // Floating "Paste Link" button matching the exact style of "Add Custom Rule"
-        ElevatedButton(
+        // Material 3 Expressive Floating "Paste Link" button with spring physics
+        ExpressiveFloatingButton(
+            text = "Paste Link",
             onClick = {
                 val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                 val clip = cm?.primaryClip
@@ -112,28 +114,14 @@ fun HomeScreen(
                     Toast.makeText(context, "Clipboard is empty", Toast.LENGTH_SHORT).show()
                 }
             },
+            icon = painterResource(R.drawable.ic_content_paste),
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
                 .padding(horizontal = 20.dp)
                 .navigationBarsPadding()
                 .padding(bottom = 88.dp)
-                .height(52.dp),
-            shape = RoundedCornerShape(26.dp),
-            elevation = ButtonDefaults.elevatedButtonElevation(
-                defaultElevation = 8.dp,
-                pressedElevation = 12.dp
-            ),
-            colors = ButtonDefaults.elevatedButtonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
-        ) {
-            Text(
-                "Paste Link",
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleSmall
-            )
-        }
+                .height(52.dp)
+        )
     }
 }

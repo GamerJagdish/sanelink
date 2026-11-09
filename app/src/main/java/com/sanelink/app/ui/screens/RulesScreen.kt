@@ -66,6 +66,7 @@ import com.sanelink.app.core.model.ProviderRule
 import com.sanelink.app.ui.components.ExpressiveConnectedButtonGroup
 import com.sanelink.app.ui.components.ExpressiveConnectedButtonItem
 import com.sanelink.app.ui.components.ExpressiveConnectedIconButtonGroup
+import com.sanelink.app.ui.components.ExpressiveFloatingButton
 import com.sanelink.app.ui.components.ExpressiveSearchBar
 import com.sanelink.app.ui.components.ExpressiveSwitch
 import com.sanelink.app.ui.theme.CleanBadgeBg
@@ -388,31 +389,18 @@ fun RulesScreen(
                 }
             }
 
-            // Floating pill button, elevated edge-to-edge above navbar on BOTH Built-in and Custom tabs
-            ElevatedButton(
+            // Material 3 Expressive Floating "Add Custom Rule" pill button with spring physics
+            ExpressiveFloatingButton(
+                text = "Add Custom Rule",
                 onClick = onAddCustomRule,
+                icon = painterResource(R.drawable.ic_add),
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
                     .padding(bottom = 88.dp)
-                    .height(52.dp),
-                shape = RoundedCornerShape(26.dp),
-                elevation = ButtonDefaults.elevatedButtonElevation(
-                    defaultElevation = 8.dp,
-                    pressedElevation = 12.dp
-                ),
-                colors = ButtonDefaults.elevatedButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            ) {
-                Text(
-                    "Add Custom Rule",
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleSmall
-                )
-            }
+                    .height(52.dp)
+            )
         }
     }
 
