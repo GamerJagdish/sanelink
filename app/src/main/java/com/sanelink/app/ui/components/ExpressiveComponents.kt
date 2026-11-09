@@ -51,10 +51,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sanelink.app.R
 import com.sanelink.app.core.model.SanitizationStats
 import com.sanelink.app.core.model.SanitizerResult
 import com.sanelink.app.ui.theme.CleanBadgeBg
@@ -160,10 +162,12 @@ fun HeroProtectionCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Rounded.Shield,
+                        painter = painterResource(
+                            if (isEnabled) R.drawable.ic_sentiment_calm else R.drawable.ic_sentiment_extremely_dissatisfied
+                        ),
                         contentDescription = null,
                         tint = if (isEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(26.dp)
+                        modifier = Modifier.size(28.dp)
                     )
                 }
 
@@ -171,13 +175,13 @@ fun HeroProtectionCard(
 
                 Column {
                     Text(
-                        text = if (isEnabled) "Active Protection" else "Protection Paused",
+                        text = if (isEnabled) "Sane links on" else "Insane links on",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = contentColor
                     )
                     Text(
-                        text = if (isEnabled) "Auto-sanitizing copied links" else "Tap anywhere to resume",
+                        text = if (isEnabled) "Your links will be sane now" else "Good luck with your insane links ig",
                         style = MaterialTheme.typography.bodySmall,
                         color = contentColor.copy(alpha = 0.75f)
                     )
