@@ -69,10 +69,12 @@ import com.sanelink.app.ui.components.ExpressiveConnectedIconButtonGroup
 import com.sanelink.app.ui.components.ExpressiveFloatingButton
 import com.sanelink.app.ui.components.ExpressiveSearchBar
 import com.sanelink.app.ui.components.ExpressiveSwitch
+import com.sanelink.app.ui.components.LocalHazeState
 import com.sanelink.app.ui.theme.CleanBadgeBg
 import com.sanelink.app.ui.theme.CleanBadgeText
 import com.sanelink.app.ui.theme.TrackerBadgeBg
 import com.sanelink.app.ui.theme.TrackerBadgeText
+import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,6 +88,7 @@ fun RulesScreen(
 ) {
     val app = SaneLinkApp.instance
     val scope = rememberCoroutineScope()
+    val hazeState = LocalHazeState.current
 
     val clearUrlsData by app.repository.clearUrlsData.collectAsState()
     val customRules by app.repository.customRules.collectAsState()
@@ -164,7 +167,12 @@ fun RulesScreen(
         Spacer(modifier = Modifier.height(12.dp))
 
         Box(modifier = Modifier.fillMaxSize()) {
-            if (selectedSubTab == 0) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(if (hazeState != null) Modifier.hazeSource(hazeState) else Modifier)
+            ) {
+                if (selectedSubTab == 0) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     // Action bar: Provider count and simplified "On/Off" button
                     Row(
@@ -388,12 +396,12 @@ fun RulesScreen(
                     }
                 }
             }
+            }
 
-            // Material 3 Expressive Floating "Add Custom Rule" pill button with spring physics
+            // Material 3 Expressive Floating "Add Custom Rule" pill button with spring physics and frosted blur
             ExpressiveFloatingButton(
                 text = "Add Custom Rule",
                 onClick = onAddCustomRule,
-                icon = painterResource(R.drawable.ic_add),
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)

@@ -45,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import com.sanelink.app.R
 import com.sanelink.app.SaneLinkApp
 import com.sanelink.app.ui.components.ExpressiveSwitch
+import com.sanelink.app.ui.components.LocalHazeState
+import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
 
 @Composable
@@ -54,6 +56,7 @@ fun SettingsScreen(
     val context = LocalContext.current
     val app = SaneLinkApp.instance
     val scope = rememberCoroutineScope()
+    val hazeState = LocalHazeState.current
 
     var showAboutDialog by remember { mutableStateOf(false) }
 
@@ -80,6 +83,7 @@ fun SettingsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .then(if (hazeState != null) Modifier.hazeSource(hazeState) else Modifier)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
             .padding(top = 12.dp),

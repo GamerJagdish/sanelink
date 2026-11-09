@@ -38,6 +38,8 @@ import com.sanelink.app.ui.components.ExpressiveFloatingButton
 import com.sanelink.app.ui.components.ExpressiveSandboxCard
 import com.sanelink.app.ui.components.ExpressiveStatsRow
 import com.sanelink.app.ui.components.HeroProtectionCard
+import com.sanelink.app.ui.components.LocalHazeState
+import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
 
 @Composable
@@ -47,6 +49,7 @@ fun HomeScreen(
     val app = SaneLinkApp.instance
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val hazeState = LocalHazeState.current
 
     val isAutoSanitize by app.preferences.autoSanitizeEnabled.collectAsState(initial = true)
     val stats by app.preferences.stats.collectAsState(initial = SanitizationStats())
@@ -64,6 +67,7 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .then(if (hazeState != null) Modifier.hazeSource(hazeState) else Modifier)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
                 .padding(top = 12.dp),
@@ -96,7 +100,7 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(200.dp))
         }
 
-        // Material 3 Expressive Floating "Paste Link" button with spring physics
+        // Material 3 Expressive Floating "Paste Link" button with spring physics and frosted blur
         ExpressiveFloatingButton(
             text = "Paste Link",
             onClick = {
@@ -114,7 +118,6 @@ fun HomeScreen(
                     Toast.makeText(context, "Clipboard is empty", Toast.LENGTH_SHORT).show()
                 }
             },
-            icon = painterResource(R.drawable.ic_content_paste),
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)

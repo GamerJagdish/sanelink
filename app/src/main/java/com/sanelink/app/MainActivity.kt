@@ -26,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +50,7 @@ import dev.chrisbanes.haze.blur.material3.Material3
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import com.sanelink.app.core.model.CustomRule
+import com.sanelink.app.ui.components.LocalHazeState
 import com.sanelink.app.ui.screens.AddEditCustomRuleScreen
 import com.sanelink.app.ui.screens.HomeScreen
 import com.sanelink.app.ui.screens.RulesScreen
@@ -136,54 +138,52 @@ class MainActivity : ComponentActivity() {
                     ) { innerPadding ->
                         val hazeState = rememberHazeState()
 
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            // Edge-to-edge screen content (scrolls underneath the floating nav bar)
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(top = innerPadding.calculateTopPadding())
-                                    .hazeSource(hazeState)
-                            ) {
-                                when (selectedTab) {
-                                    0 -> HomeScreen()
-                                    1 -> RulesScreen(
-                                        selectedSubTab = rulesSubTab,
-                                        onSubTabChanged = { rulesSubTab = it },
-                                        onAddCustomRule = { isAddingCustomRule = true },
-                                        onEditCustomRule = { rule -> editingCustomRule = rule }
-                                    )
-                                    2 -> SettingsScreen()
+                        CompositionLocalProvider(LocalHazeState provides hazeState) {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                // Edge-to-edge screen content (scrolls underneath the floating nav bar and floating buttons)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(top = innerPadding.calculateTopPadding())
+                                ) {
+                                    when (selectedTab) {
+                                        0 -> HomeScreen()
+                                        1 -> RulesScreen(
+                                            selectedSubTab = rulesSubTab,
+                                            onSubTabChanged = { rulesSubTab = it },
+                                            onAddCustomRule = { isAddingCustomRule = true },
+                                            onEditCustomRule = { rule -> editingCustomRule = rule }
+                                        )
+                                        2 -> SettingsScreen()
+                                    }
                                 }
-                            }
 
-                            // Floating Expressive Frosted Blur Navigation Bar
-                            val navBarShape = RoundedCornerShape(32.dp)
-                            val blurStyle = HazeBlurStyle.Material3()
+                                // Floating Expressive Frosted Blur Navigation Bar
+                                val navBarShape = RoundedCornerShape(32.dp)
+                                val blurStyle = HazeBlurStyle.Material3()
 
-                            Surface(
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .padding(horizontal = 20.dp)
-                                    .navigationBarsPadding()
-                                    .padding(bottom = 12.dp)
-                                    .shadow(
-                                        elevation = 12.dp,
-                                        shape = navBarShape,
-                                        spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
-                                        ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                    )
-                                    .clip(navBarShape)
-                                    .hazeBlur(
-                                        input = HazeInput.Sources(hazeState),
-                                        style = blurStyle,
-                                        performanceMode = HazePerformanceMode.Performance
-                                    ),
-                                shape = navBarShape,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.75f),
-                                tonalElevation = 0.dp,
-                                shadowElevation = 0.dp
-                            ) {
+                                Surface(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(horizontal = 20.dp)
+                                        .navigationBarsPadding()
+                                        .padding(bottom = 12.dp)
+                                        .shadow(
+                                            elevation = 8.dp,
+                                            shape = navBarShape
+                                        )
+                                        .clip(navBarShape)
+                                        .hazeBlur(
+                                            input = HazeInput.Sources(hazeState),
+                                            style = blurStyle,
+                                            performanceMode = HazePerformanceMode.Performance
+                                        ),
+                                    shape = navBarShape,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                                    color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.75f),
+                                    tonalElevation = 0.dp,
+                                    shadowElevation = 0.dp
+                                ) {
                                 NavigationBar(
                                     containerColor = Color.Transparent,
                                     tonalElevation = 0.dp,
@@ -242,4 +242,5 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
 }

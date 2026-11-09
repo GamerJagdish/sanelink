@@ -48,12 +48,14 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
@@ -64,6 +66,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.HazePerformanceMode
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.hazeBlur
+import dev.chrisbanes.haze.blur.material3.Material3
+import dev.chrisbanes.haze.hazeSource
 import com.sanelink.app.R
 import com.sanelink.app.core.model.SanitizationStats
 import com.sanelink.app.core.model.SanitizerResult
@@ -871,14 +880,20 @@ fun ExpressiveConnectedIconButtonGroup(
 }
 
 /**
+ * CompositionLocal providing access to the screen HazeState for hardware-accelerated frosted blur effects.
+ */
+val LocalHazeState = compositionLocalOf<HazeState?> { null }
+
+/**
  * Material 3 Expressive Floating Action and Primary Pill Button
  *
- * Implements Material 3 Expressive specifications and motion mechanics:
+ * Implements Material 3 Expressive specifications, spring physics, and frosted blur matching the navbar:
+ * - Frosted blur glassmorphism matching the navigation bar via HazeBlurStyle.Material3
  * - Dynamic shape morphing from resting full pill (26dp) into subtle squircle (18dp) on touch
  * - Bouncy spring scale squash and recovery (0.96f scale on press)
- * - Spring elevation dynamics with 6dp resting to 12dp pressed
+ * - Spring elevation dynamics with 8dp resting to 12dp pressed matching the navbar drop shadow
  * - Instantaneous touch-down tracking using interactionSource and collectIsPressedAsState
- * - High-emphasis filled primary container with optional leading icon
+ * - High-emphasis styling with optional leading icon and bold typography
  */
 @Composable
 fun ExpressiveFloatingButton(
@@ -886,8 +901,10 @@ fun ExpressiveFloatingButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     icon: Painter? = null,
-    containerColor: Color = MaterialTheme.colorScheme.primary,
-    contentColor: Color = MaterialTheme.colorScheme.onPrimary,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.75f),
+    contentColor: Color = MaterialTheme.colorScheme.primary,
+    border: BorderStroke? = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+    hazeState: HazeState? = LocalHazeState.current,
     enabled: Boolean = true
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -913,9 +930,9 @@ fun ExpressiveFloatingButton(
         label = "floatingBtnCornerRadius"
     )
 
-    // Dynamic M3 Expressive spring elevation
+    // Dynamic M3 Expressive spring elevation matching the navbar drop shadow
     val elevation by animateDpAsState(
-        targetValue = if (isPressed) 12.dp else 6.dp,
+        targetValue = if (isPressed) 12.dp else 8.dp,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMediumLow
@@ -924,20 +941,37 @@ fun ExpressiveFloatingButton(
     )
 
     val shape = RoundedCornerShape(cornerRadius)
+    val blurStyle = HazeBlurStyle.Material3()
 
     Surface(
         onClick = onClick,
         enabled = enabled,
         shape = shape,
+        border = border,
         color = containerColor,
         contentColor = contentColor,
-        shadowElevation = elevation,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
         interactionSource = interactionSource,
         modifier = modifier
             .graphicsLayer {
                 scaleX = pressScale
                 scaleY = pressScale
             }
+            .shadow(
+                elevation = elevation,
+                shape = shape
+            )
+            .clip(shape)
+            .then(
+                if (hazeState != null) {
+                    Modifier.hazeBlur(
+                        input = HazeInput.Sources(hazeState),
+                        style = blurStyle,
+                        performanceMode = HazePerformanceMode.Performance
+                    )
+                } else Modifier
+            )
     ) {
         Box(
             modifier = Modifier
