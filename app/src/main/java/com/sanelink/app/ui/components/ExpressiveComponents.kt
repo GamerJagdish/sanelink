@@ -23,14 +23,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.ContentCopy
-import androidx.compose.material.icons.rounded.DeleteOutline
-import androidx.compose.material.icons.rounded.Link
-import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -77,7 +69,7 @@ fun ExpressiveSwitch(
         enabled = enabled,
         thumbContent = {
             Icon(
-                imageVector = if (checked) Icons.Rounded.Check else Icons.Rounded.Close,
+                painter = painterResource(if (checked) R.drawable.ic_check else R.drawable.ic_close),
                 contentDescription = null,
                 modifier = Modifier.size(SwitchDefaults.IconSize)
             )
@@ -294,7 +286,7 @@ fun ExpressiveSandboxCard(
                         modifier = Modifier.size(28.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Rounded.DeleteOutline,
+                            painter = painterResource(R.drawable.ic_delete),
                             contentDescription = "Clear",
                             tint = MaterialTheme.colorScheme.outline
                         )
@@ -408,7 +400,7 @@ fun ExpressiveSandboxCard(
                             )
                         ) {
                             Icon(
-                                imageVector = Icons.Rounded.ContentCopy,
+                                painter = painterResource(R.drawable.ic_content_copy),
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
                             )

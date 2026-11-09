@@ -15,10 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CleaningServices
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -42,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeInput
@@ -197,7 +194,7 @@ class MainActivity : ComponentActivity() {
                                         onClick = { selectedTab = 0 },
                                         icon = {
                                             Icon(
-                                                imageVector = Icons.Rounded.CleaningServices,
+                                                painter = painterResource(R.drawable.ic_cleaning_services),
                                                 contentDescription = "Dashboard"
                                             )
                                         },
@@ -212,7 +209,7 @@ class MainActivity : ComponentActivity() {
                                         onClick = { selectedTab = 1 },
                                         icon = {
                                             Icon(
-                                                imageVector = Icons.Rounded.Shield,
+                                                painter = painterResource(R.drawable.ic_shield),
                                                 contentDescription = "Rules"
                                             )
                                         },
@@ -227,7 +224,7 @@ class MainActivity : ComponentActivity() {
                                         onClick = { selectedTab = 2 },
                                         icon = {
                                             Icon(
-                                                imageVector = Icons.Rounded.Settings,
+                                                painter = painterResource(R.drawable.ic_settings),
                                                 contentDescription = "Settings"
                                             )
                                         },

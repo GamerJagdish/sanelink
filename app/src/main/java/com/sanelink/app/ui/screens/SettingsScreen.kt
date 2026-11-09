@@ -19,11 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.OpenInNew
-import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.Code
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -44,8 +39,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sanelink.app.R
 import com.sanelink.app.SaneLinkApp
 import com.sanelink.app.ui.components.ExpressiveSwitch
 import kotlinx.coroutines.launch
@@ -240,7 +237,7 @@ fun SettingsScreen(
                         Text("Configure in System Settings")
                         Spacer(modifier = Modifier.size(8.dp))
                         Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
+                            painter = painterResource(R.drawable.ic_open_in_new),
                             contentDescription = null,
                             modifier = Modifier.size(16.dp)
                         )
@@ -300,7 +297,7 @@ fun SettingsScreen(
                             )
                         }
                         Icon(
-                            imageVector = Icons.Rounded.ChevronRight,
+                            painter = painterResource(R.drawable.ic_chevron_right),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
@@ -353,7 +350,7 @@ fun SettingsScreen(
             onDismissRequest = { showAboutDialog = false },
             icon = {
                 Icon(
-                    imageVector = Icons.Rounded.Info,
+                    painter = painterResource(R.drawable.ic_info),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(28.dp)
@@ -455,7 +452,7 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(
-                            imageVector = Icons.Rounded.Code,
+                            painter = painterResource(R.drawable.ic_code),
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )
@@ -463,7 +460,7 @@ fun SettingsScreen(
                         Text("Source Code on GitHub")
                         Spacer(modifier = Modifier.size(8.dp))
                         Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
+                            painter = painterResource(R.drawable.ic_open_in_new),
                             contentDescription = null,
                             modifier = Modifier.size(16.dp)
                         )

@@ -24,14 +24,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AutoFixHigh
-import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.DeleteOutline
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -64,11 +56,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sanelink.app.R
 import com.sanelink.app.SaneLinkApp
 import com.sanelink.app.core.model.CustomRule
 import com.sanelink.app.core.model.ProviderRule
@@ -166,7 +160,7 @@ fun RulesScreen(
                         },
                         leadingIcon = {
                             Icon(
-                                imageVector = Icons.Rounded.Search,
+                                painter = painterResource(R.drawable.ic_search),
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.outline
                             )
@@ -266,7 +260,7 @@ fun RulesScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Rounded.AutoFixHigh,
+                                painter = painterResource(R.drawable.ic_auto_fix_high),
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(42.dp)
@@ -466,7 +460,7 @@ private fun BuiltInProviderCard(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Icon(
-                    imageVector = Icons.Rounded.ChevronRight,
+                    painter = painterResource(R.drawable.ic_chevron_right),
                     contentDescription = "Details",
                     tint = MaterialTheme.colorScheme.outline
                 )
@@ -530,7 +524,7 @@ private fun CustomRuleCard(
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Rounded.SwapHoriz,
+                                painter = painterResource(R.drawable.ic_swap_horiz),
                                 contentDescription = null,
                                 tint = CleanBadgeText,
                                 modifier = Modifier.size(16.dp)
@@ -596,7 +590,7 @@ private fun CustomRuleCard(
                                 modifier = Modifier.size(36.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Rounded.Edit,
+                                    painter = painterResource(R.drawable.ic_edit),
                                     contentDescription = "Edit",
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(18.dp)
@@ -613,7 +607,7 @@ private fun CustomRuleCard(
                                 modifier = Modifier.size(36.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Rounded.DeleteOutline,
+                                    painter = painterResource(R.drawable.ic_delete),
                                     contentDescription = "Delete",
                                     tint = MaterialTheme.colorScheme.error,
                                     modifier = Modifier.size(18.dp)
@@ -714,7 +708,7 @@ private fun RulePreviewBottomSheet(
                             modifier = Modifier.size(24.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Rounded.Refresh,
+                                painter = painterResource(R.drawable.ic_refresh),
                                 contentDescription = "Reset Dummy URL",
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(16.dp)
