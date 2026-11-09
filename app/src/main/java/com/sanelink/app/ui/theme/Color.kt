@@ -18,15 +18,22 @@ val OnTertiaryLight = Color(0xFFFFFFFF)
 val TertiaryContainerLight = Color(0xFFC2E8FA)
 val OnTertiaryContainerLight = Color(0xFF001F29)
 
-val BackgroundLight = Color(0xFFFBFDFA)
+val BackgroundLight = Color(0xFFF7FAF7)
 val OnBackgroundLight = Color(0xFF191C1B)
 val SurfaceLight = Color(0xFFFFFFFF)
 val OnSurfaceLight = Color(0xFF191C1B)
+val SurfaceDimLight = Color(0xFFD6DDD7)
+val SurfaceBrightLight = Color(0xFFF7FAF7)
+val SurfaceContainerLowestLight = Color(0xFFFFFFFF)
+val SurfaceContainerLowLight = Color(0xFFF1F6F2)
+val SurfaceContainerLight = Color(0xFFEBEFEA)
+val SurfaceContainerHighLight = Color(0xFFE5EBE5)
+val SurfaceContainerHighestLight = Color(0xFFDFE6DF)
 val SurfaceVariantLight = Color(0xFFEEF3EF)
 val OnSurfaceVariantLight = Color(0xFF3F4944)
 val OutlineVariantLight = Color(0xFFD6DFD9)
 
-// Dark Colors (Rich Material 3 Expressive Tonal Contrast)
+// Dark Colors (Rich Material 3 Expressive Tonal Hierarchy)
 val PrimaryDark = Color(0xFF52DCA9)
 val OnPrimaryDark = Color(0xFF003828)
 val PrimaryContainerDark = Color(0xFF00523C)
@@ -42,13 +49,20 @@ val OnTertiaryDark = Color(0xFF083542)
 val TertiaryContainerDark = Color(0xFF254C5A)
 val OnTertiaryContainerDark = Color(0xFFC2E8FA)
 
-val BackgroundDark = Color(0xFF0E1210) // Deep background canvas
+val BackgroundDark = Color(0xFF0F1412) // Deep background canvas
 val OnBackgroundDark = Color(0xFFE2E7E3)
-val SurfaceDark = Color(0xFF1B231F) // Distinct elevated surface
+val SurfaceDark = Color(0xFF131A17) // Elevated surface
 val OnSurfaceDark = Color(0xFFE2E7E3)
-val SurfaceVariantDark = Color(0xFF25302B) // Elevated card container
+val SurfaceDimDark = Color(0xFF0F1412)
+val SurfaceBrightDark = Color(0xFF353F3A)
+val SurfaceContainerLowestDark = Color(0xFF0B0F0E)
+val SurfaceContainerLowDark = Color(0xFF161E1A)
+val SurfaceContainerDark = Color(0xFF1B2420) // Cohesive grouped container (Gboard style)
+val SurfaceContainerHighDark = Color(0xFF232D29)
+val SurfaceContainerHighestDark = Color(0xFF2C3833)
+val SurfaceVariantDark = Color(0xFF232D29)
 val OnSurfaceVariantDark = Color(0xFFC2CCC5)
-val OutlineVariantDark = Color(0xFF36443D) // Subtle tactile card border in dark mode
+val OutlineVariantDark = Color(0xFF333E38)
 
 // Expressive Accents
 val TrackerBadgeBg = Color(0xFFFFDAD6)

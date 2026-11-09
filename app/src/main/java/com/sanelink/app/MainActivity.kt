@@ -182,8 +182,8 @@ class MainActivity : ComponentActivity() {
                                         performanceMode = HazePerformanceMode.Performance
                                     ),
                                 shape = navBarShape,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.70f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.75f),
                                 tonalElevation = 0.dp,
                                 shadowElevation = 0.dp
                             ) {
