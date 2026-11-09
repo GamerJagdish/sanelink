@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -41,6 +42,8 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -56,6 +59,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sanelink.app.R
@@ -640,5 +644,78 @@ fun ExpressiveConnectedButtonGroup(
         selectedIndex = selectedIndex,
         onSelect = onSelect,
         modifier = modifier
+    )
+}
+
+/**
+ * Material 3 Expressive Search Bar.
+ *
+ * Implements the official Material 3 Search Bar specification:
+ * - 56dp height and 28dp pill shape (CornerFull)
+ * - surfaceContainerHigh background without boundary stroke
+ * - 24dp leading search icon
+ * - bodyLarge typography for query and hint text
+ * - Animated trailing clear icon button
+ */
+@Composable
+fun ExpressiveSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    placeholder: String = "Search rules...",
+    onClear: () -> Unit = { onQueryChange("") }
+) {
+    TextField(
+        value = query,
+        onValueChange = onQueryChange,
+        placeholder = {
+            Text(
+                text = placeholder,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
+        },
+        leadingIcon = {
+            Icon(
+                painter = painterResource(R.drawable.ic_search),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp)
+            )
+        },
+        trailingIcon = {
+            AnimatedVisibility(
+                visible = query.isNotEmpty(),
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                IconButton(onClick = onClear) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_close),
+                        contentDescription = "Clear search",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        shape = RoundedCornerShape(28.dp),
+        textStyle = MaterialTheme.typography.bodyLarge.copy(
+            color = MaterialTheme.colorScheme.onSurface
+        ),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            disabledIndicatorColor = Color.Transparent,
+            cursorColor = MaterialTheme.colorScheme.primary
+        ),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(56.dp)
     )
 }

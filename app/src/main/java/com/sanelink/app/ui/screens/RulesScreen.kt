@@ -65,6 +65,7 @@ import com.sanelink.app.core.model.CustomRule
 import com.sanelink.app.core.model.ProviderRule
 import com.sanelink.app.ui.components.ExpressiveConnectedButtonGroup
 import com.sanelink.app.ui.components.ExpressiveConnectedButtonItem
+import com.sanelink.app.ui.components.ExpressiveSearchBar
 import com.sanelink.app.ui.components.ExpressiveSwitch
 import com.sanelink.app.ui.theme.CleanBadgeBg
 import com.sanelink.app.ui.theme.CleanBadgeText
@@ -105,6 +106,22 @@ fun RulesScreen(
         }
     }
 
+    val filteredCustomRules = remember(customRules, searchQuery) {
+        if (searchQuery.isBlank()) {
+            customRules
+        } else {
+            customRules.filter { rule ->
+                rule.name.contains(searchQuery, ignoreCase = true) ||
+                        rule.urlPattern.contains(searchQuery, ignoreCase = true) ||
+                        rule.stripParameters.any { it.contains(searchQuery, ignoreCase = true) } ||
+                        (rule.rewritePattern?.contains(searchQuery, ignoreCase = true) == true)
+            }
+        }
+    }
+
+    val builtInCount = if (searchQuery.isBlank()) clearUrlsData.providers.size else providersList.size
+    val customCount = if (searchQuery.isBlank()) customRules.size else filteredCustomRules.size
+
     val allBuiltInDisabled = remember(clearUrlsData, disabledProviderIds) {
         clearUrlsData.providers.isNotEmpty() && disabledProviderIds.containsAll(clearUrlsData.providers.keys)
     }
@@ -115,16 +132,26 @@ fun RulesScreen(
             .padding(horizontal = 20.dp)
             .padding(top = 12.dp)
     ) {
+        // Material 3 Expressive Search Bar (above the tabs for global filtering)
+        ExpressiveSearchBar(
+            query = searchQuery,
+            onQueryChange = { searchQuery = it },
+            placeholder = "Search rules...",
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
         // Material 3 Expressive Connected Button Group: Built-in vs Custom
         ExpressiveConnectedButtonGroup(
             items = listOf(
                 ExpressiveConnectedButtonItem(
                     label = "Built-in",
-                    count = clearUrlsData.providers.size
+                    count = builtInCount
                 ),
                 ExpressiveConnectedButtonItem(
                     label = "Custom",
-                    count = customRules.size
+                    count = customCount
                 )
             ),
             selectedIndex = selectedSubTab,
@@ -132,41 +159,11 @@ fun RulesScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Box(modifier = Modifier.fillMaxSize()) {
             if (selectedSubTab == 0) {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // Built-in Tab Search Field
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        placeholder = {
-                            Text(
-                                "Search",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_search),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.outline
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f),
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f),
-                            unfocusedBorderColor = Color.Transparent
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
                     // Action bar: Provider count and simplified "On/Off" button
                     Row(
                         modifier = Modifier
@@ -177,7 +174,7 @@ fun RulesScreen(
                     ) {
                         val activeCount = clearUrlsData.providers.size - disabledProviderIds.size
                         Text(
-                            text = "$activeCount active rules",
+                            text = if (searchQuery.isBlank()) "$activeCount active rules" else "${providersList.size} matching rules",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -206,29 +203,73 @@ fun RulesScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        contentPadding = PaddingValues(bottom = 220.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(
-                            items = providersList,
-                            key = { it.first },
-                            contentType = { "built_in_provider" }
-                        ) { (name, rule) ->
-                            val isProviderActive = !disabledProviderIds.contains(name)
+                    if (providersList.isEmpty() && searchQuery.isNotBlank()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp)
+                                .padding(top = 64.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_search),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                            }
 
-                            BuiltInProviderCard(
-                                name = name,
-                                rule = rule,
-                                isActive = isProviderActive,
-                                onToggle = { enable ->
-                                    scope.launch { app.repository.toggleProvider(name, enable) }
-                                },
-                                onClick = {
-                                    previewProvider = name to rule
-                                }
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = "No Matching Built-in Rules",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center
                             )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = "No built-in providers match \"$searchQuery\"",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            contentPadding = PaddingValues(bottom = 220.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(
+                                items = providersList,
+                                key = { it.first },
+                                contentType = { "built_in_provider" }
+                            ) { (name, rule) ->
+                                val isProviderActive = !disabledProviderIds.contains(name)
+
+                                BuiltInProviderCard(
+                                    name = name,
+                                    rule = rule,
+                                    isActive = isProviderActive,
+                                    onToggle = { enable ->
+                                        scope.launch { app.repository.toggleProvider(name, enable) }
+                                    },
+                                    onClick = {
+                                        previewProvider = name to rule
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -278,6 +319,48 @@ fun RulesScreen(
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
                     }
+                } else if (filteredCustomRules.isEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp)
+                            .padding(top = 64.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_search),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = "No Matching Custom Rules",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = "No custom rules match \"$searchQuery\"",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 } else {
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -285,7 +368,7 @@ fun RulesScreen(
                         modifier = Modifier.fillMaxSize()
                     ) {
                         items(
-                            items = customRules,
+                            items = filteredCustomRules,
                             key = { it.id },
                             contentType = { "custom_rule" }
                         ) { rule ->
