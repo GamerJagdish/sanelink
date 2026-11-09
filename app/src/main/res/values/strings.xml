@@ -2,5 +2,6 @@
     <string name="app_name">SaneLink</string>
     <string name="share_clean_action">Sanitize &amp; Copy</string>
     <string name="tile_label">Clean Clipboard</string>
+    <string name="process_text_clean">Clean Link</string>
     <string name="accessibility_service_description">Monitors copied links to automatically strip tracking parameters and replace redirects offline.</string>
 </resources>

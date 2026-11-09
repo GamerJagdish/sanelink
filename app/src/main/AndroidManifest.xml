@@ -47,6 +47,21 @@
             </intent-filter>
         </activity>
 
+        <!-- Text Selection Action (Clean & replace highlighted links in place) -->
+        <activity
+            android:name=".ProcessTextActivity"
+            android:exported="true"
+            android:label="@string/process_text_clean"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:noHistory="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
         <!-- Background Clipboard Accessibility Service -->
         <service
             android:name=".service.ClipboardAccessibilityService"
