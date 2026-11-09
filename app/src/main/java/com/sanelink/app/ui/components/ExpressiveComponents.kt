@@ -888,12 +888,11 @@ val LocalHazeState = compositionLocalOf<HazeState?> { null }
  * Material 3 Expressive Floating Action and Primary Pill Button
  *
  * Implements Material 3 Expressive specifications, spring physics, and frosted blur matching the navbar:
- * - Frosted blur glassmorphism matching the navigation bar via HazeBlurStyle.Material3
+ * - Frosted blur glassmorphism via HazeBlurStyle.Material3 with translucent dynamic Monet primary color
  * - Dynamic shape morphing from resting full pill (26dp) into subtle squircle (18dp) on touch
  * - Bouncy spring scale squash and recovery (0.96f scale on press)
- * - Spring elevation dynamics with 8dp resting to 12dp pressed matching the navbar drop shadow
  * - Instantaneous touch-down tracking using interactionSource and collectIsPressedAsState
- * - High-emphasis styling with optional leading icon and bold typography
+ * - High-emphasis Monet styling with optional leading icon and bold typography
  */
 @Composable
 fun ExpressiveFloatingButton(
@@ -901,8 +900,8 @@ fun ExpressiveFloatingButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     icon: Painter? = null,
-    containerColor: Color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.75f),
-    contentColor: Color = MaterialTheme.colorScheme.primary,
+    containerColor: Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.80f),
+    contentColor: Color = MaterialTheme.colorScheme.onPrimary,
     border: BorderStroke? = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
     hazeState: HazeState? = LocalHazeState.current,
     enabled: Boolean = true
@@ -930,16 +929,6 @@ fun ExpressiveFloatingButton(
         label = "floatingBtnCornerRadius"
     )
 
-    // Dynamic M3 Expressive spring elevation matching the navbar drop shadow
-    val elevation by animateDpAsState(
-        targetValue = if (isPressed) 12.dp else 8.dp,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow
-        ),
-        label = "floatingBtnElevation"
-    )
-
     val shape = RoundedCornerShape(cornerRadius)
     val blurStyle = HazeBlurStyle.Material3()
 
@@ -958,10 +947,6 @@ fun ExpressiveFloatingButton(
                 scaleX = pressScale
                 scaleY = pressScale
             }
-            .shadow(
-                elevation = elevation,
-                shape = shape
-            )
             .clip(shape)
             .then(
                 if (hazeState != null) {

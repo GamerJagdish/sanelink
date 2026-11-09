@@ -168,10 +168,6 @@ class MainActivity : ComponentActivity() {
                                         .padding(horizontal = 20.dp)
                                         .navigationBarsPadding()
                                         .padding(bottom = 12.dp)
-                                        .shadow(
-                                            elevation = 8.dp,
-                                            shape = navBarShape
-                                        )
                                         .clip(navBarShape)
                                         .hazeBlur(
                                             input = HazeInput.Sources(hazeState),
