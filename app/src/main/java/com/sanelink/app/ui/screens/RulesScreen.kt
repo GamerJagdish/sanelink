@@ -1,8 +1,15 @@
 package com.sanelink.app.ui.screens
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,6 +60,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -436,19 +444,62 @@ private fun BuiltInProviderCard(
     onToggle: (Boolean) -> Unit,
     onClick: () -> Unit
 ) {
-    Card(
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.98f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        label = "providerPressScale"
+    )
+
+    val cornerRadius by animateDpAsState(
+        targetValue = if (isPressed) 16.dp else 22.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "providerCornerRadius"
+    )
+
+    val containerColor by animateColorAsState(
+        targetValue = if (isActive) {
+            MaterialTheme.colorScheme.surfaceContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        },
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "providerContainerColor"
+    )
+
+    val titleColor by animateColorAsState(
+        targetValue = if (isActive) {
+            MaterialTheme.colorScheme.onSurface
+        } else {
+            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        },
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "providerTitleColor"
+    )
+
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(cornerRadius),
+        color = containerColor,
         border = BorderStroke(
             1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (isActive) 0.35f else 0.2f)
         ),
+        interactionSource = interactionSource,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
     ) {
         Row(
             modifier = Modifier
@@ -461,7 +512,8 @@ private fun BuiltInProviderCard(
                 Text(
                     text = formatProviderName(name),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = titleColor
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -475,7 +527,7 @@ private fun BuiltInProviderCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
+                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (isActive) 0.5f else 0.25f))
                                 .padding(horizontal = 7.dp, vertical = 2.dp)
                         ) {
                             Text(
@@ -483,7 +535,7 @@ private fun BuiltInProviderCard(
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                color = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.outline
                             )
                         }
                     }
@@ -492,7 +544,7 @@ private fun BuiltInProviderCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(CleanBadgeBg)
+                                .background(if (isActive) CleanBadgeBg else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
                                 .padding(horizontal = 7.dp, vertical = 2.dp)
                         ) {
                             Text(
@@ -500,7 +552,7 @@ private fun BuiltInProviderCard(
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 11.sp,
-                                color = CleanBadgeText
+                                color = if (isActive) CleanBadgeText else MaterialTheme.colorScheme.outline
                             )
                         }
                     }
@@ -509,19 +561,21 @@ private fun BuiltInProviderCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isActive) 0.7f else 0.35f))
                                 .padding(horizontal = 7.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = "Cleans Path",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (isActive) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.outline
                             )
                         }
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.width(10.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ExpressiveSwitch(
@@ -547,17 +601,62 @@ private fun CustomRuleCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Card(
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.98f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        label = "customRulePressScale"
+    )
+
+    val cornerRadius by animateDpAsState(
+        targetValue = if (isPressed) 16.dp else 22.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "customRuleCornerRadius"
+    )
+
+    val containerColor by animateColorAsState(
+        targetValue = if (rule.isEnabled) {
+            MaterialTheme.colorScheme.surfaceContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        },
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "customRuleContainerColor"
+    )
+
+    val titleColor by animateColorAsState(
+        targetValue = if (rule.isEnabled) {
+            MaterialTheme.colorScheme.onSurface
+        } else {
+            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        },
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "customRuleTitleColor"
+    )
+
+    Surface(
+        onClick = onEdit,
+        shape = RoundedCornerShape(cornerRadius),
+        color = containerColor,
         border = BorderStroke(
             1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (rule.isEnabled) 0.35f else 0.2f)
         ),
-        modifier = Modifier.fillMaxWidth()
+        interactionSource = interactionSource,
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
             Row(
@@ -574,7 +673,8 @@ private fun CustomRuleCard(
                     Text(
                         text = rule.name,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = titleColor
                     )
                     Text(
                         text = rule.urlPattern,
@@ -590,13 +690,13 @@ private fun CustomRuleCard(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(CleanBadgeBg)
+                                .background(if (rule.isEnabled) CleanBadgeBg else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_swap_horiz),
                                 contentDescription = null,
-                                tint = CleanBadgeText,
+                                tint = if (rule.isEnabled) CleanBadgeText else MaterialTheme.colorScheme.outline,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -604,7 +704,7 @@ private fun CustomRuleCard(
                                 text = "Rewrites to: ${rule.rewriteReplacement}",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.SemiBold,
-                                color = CleanBadgeText
+                                color = if (rule.isEnabled) CleanBadgeText else MaterialTheme.colorScheme.outline
                             )
                         }
                     }
@@ -620,7 +720,7 @@ private fun CustomRuleCard(
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(6.dp))
-                                        .background(TrackerBadgeBg)
+                                        .background(if (rule.isEnabled) TrackerBadgeBg else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
                                         .padding(horizontal = 8.dp, vertical = 2.dp)
                                 ) {
                                     Text(
@@ -628,7 +728,7 @@ private fun CustomRuleCard(
                                         style = MaterialTheme.typography.labelSmall,
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 11.sp,
-                                        color = TrackerBadgeText
+                                        color = if (rule.isEnabled) TrackerBadgeText else MaterialTheme.colorScheme.outline
                                     )
                                 }
                             }
@@ -636,7 +736,7 @@ private fun CustomRuleCard(
                     }
                 }
 
-                // Right Content: Toggle on top, Merged Edit & Delete buttons underneath
+                // Right Content: Toggle on top, Connected Edit & Delete buttons underneath
                 Column(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(10.dp)
