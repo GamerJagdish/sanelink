@@ -63,10 +63,3 @@ val SurfaceContainerHighestDark = Color(0xFF2C3833)
 val SurfaceVariantDark = Color(0xFF232D29)
 val OnSurfaceVariantDark = Color(0xFFC2CCC5)
 val OutlineVariantDark = Color(0xFF333E38)
-
-// Expressive Accents
-val TrackerBadgeBg = Color(0xFFFFDAD6)
-val TrackerBadgeText = Color(0xFF93000A)
-val SuccessGreen = Color(0xFF2E7D32)
-val CleanBadgeBg = Color(0xFFD7F8E8)
-val CleanBadgeText = Color(0xFF0B6638)
