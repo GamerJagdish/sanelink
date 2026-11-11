@@ -80,6 +80,7 @@ import com.sanelink.app.ui.screens.AddEditCustomRuleScreen
 import com.sanelink.app.ui.screens.HomeScreen
 import com.sanelink.app.ui.screens.RulesScreen
 import com.sanelink.app.ui.screens.SettingsScreen
+import com.sanelink.app.ui.theme.ExpressiveShapeTokens
 import com.sanelink.app.ui.theme.LocalMotionScheme
 import com.sanelink.app.ui.theme.SaneLinkTheme
 import com.sanelink.app.ui.theme.rememberReducedMotion
@@ -351,7 +352,7 @@ class MainActivity : ComponentActivity() {
                                     }
 
                                 // Floating Expressive Frosted Blur Navigation Bar
-                                val navBarShape = RoundedCornerShape(32.dp)
+                                val navBarShape = ExpressiveShapeTokens.ShapeExtraLargeIncreased
                                 val blurStyle = HazeBlurStyle.Material3()
 
                                 Surface(
