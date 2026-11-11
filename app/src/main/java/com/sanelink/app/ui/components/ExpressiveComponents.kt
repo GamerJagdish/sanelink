@@ -100,24 +100,66 @@ fun ExpressiveSwitch(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
     val motionScheme = LocalMotionScheme.current
+
+    // Tactile squash-and-stretch on touch/drag: switch track vertically squishes and horizontally expands
+    val switchScaleX by animateFloatAsState(
+        targetValue = if (isPressed) 1.04f else 1f,
+        animationSpec = motionScheme.fastSpatial,
+        label = "switchScaleX"
+    )
+    val switchScaleY by animateFloatAsState(
+        targetValue = if (isPressed) 0.92f else 1f,
+        animationSpec = motionScheme.fastSpatial,
+        label = "switchScaleY"
+    )
+
+    // Dynamic rotation and scale for thumb icon
+    val iconRotation by animateFloatAsState(
+        targetValue = if (checked) 0f else -90f,
+        animationSpec = motionScheme.fastSpatial,
+        label = "switchThumbIconRot"
+    )
+    val iconPressScale by animateFloatAsState(
+        targetValue = if (isPressed) 1.18f else 1.0f,
+        animationSpec = motionScheme.fastSpatial,
+        label = "switchThumbIconScale"
+    )
+
     Switch(
         checked = checked,
         onCheckedChange = onCheckedChange,
         enabled = enabled,
+        interactionSource = interactionSource,
         thumbContent = {
             AnimatedContent(
                 targetState = checked,
                 transitionSpec = {
-                    (scaleIn(animationSpec = motionScheme.fastSpatial) + fadeIn(animationSpec = motionScheme.fastEffects))
-                        .togetherWith(scaleOut(animationSpec = motionScheme.fastSpatial) + fadeOut(animationSpec = motionScheme.fastEffects))
+                    (scaleIn(
+                        animationSpec = motionScheme.fastSpatial,
+                        initialScale = 0.4f
+                    ) + fadeIn(animationSpec = motionScheme.fastEffects))
+                        .togetherWith(
+                            scaleOut(
+                                animationSpec = motionScheme.fastSpatial,
+                                targetScale = 0.4f
+                            ) + fadeOut(animationSpec = motionScheme.fastEffects)
+                        )
                 },
                 label = "switchThumbMorph"
             ) { isChecked ->
                 Icon(
                     painter = painterResource(if (isChecked) R.drawable.ic_check else R.drawable.ic_close),
                     contentDescription = null,
-                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                    modifier = Modifier
+                        .size(SwitchDefaults.IconSize)
+                        .graphicsLayer {
+                            rotationZ = iconRotation
+                            scaleX = iconPressScale
+                            scaleY = iconPressScale
+                        }
                 )
             }
         },
@@ -130,7 +172,10 @@ fun ExpressiveSwitch(
             uncheckedBorderColor = MaterialTheme.colorScheme.outline,
             uncheckedIconColor = MaterialTheme.colorScheme.surfaceContainerHighest
         ),
-        modifier = modifier
+        modifier = modifier.graphicsLayer {
+            scaleX = switchScaleX
+            scaleY = switchScaleY
+        }
     )
 }
 
