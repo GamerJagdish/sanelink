@@ -953,6 +953,7 @@ private fun RulePreviewBottomSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val app = SaneLinkApp.instance
+    val motion = LocalMotionScheme.current
 
     // Interactive Dummy URL state
     val defaultDummy = remember(name, rule) { generateDummyUrl(name, rule) }
@@ -963,10 +964,19 @@ private fun RulePreviewBottomSheet(
         if (testUrlInput.isNotBlank()) sanitizer.sanitizeSingleUrl(testUrlInput) else null
     }
 
+    val resetInteractionSource = remember { MutableInteractionSource() }
+    val isResetPressed by resetInteractionSource.collectIsPressedAsState()
+    val resetScale by animateFloatAsState(
+        targetValue = if (isResetPressed) 0.82f else 1f,
+        animationSpec = motion.fastSpatial,
+        label = "ResetDummyScale"
+    )
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Column(
             modifier = Modifier
@@ -1026,13 +1036,19 @@ private fun RulePreviewBottomSheet(
 
                         IconButton(
                             onClick = { testUrlInput = defaultDummy },
-                            modifier = Modifier.size(24.dp)
+                            interactionSource = resetInteractionSource,
+                            modifier = Modifier
+                                .size(28.dp)
+                                .graphicsLayer {
+                                    scaleX = resetScale
+                                    scaleY = resetScale
+                                }
                         ) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_refresh),
                                 contentDescription = "Reset Dummy URL",
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
@@ -1301,12 +1317,30 @@ private fun RulePreviewBottomSheet(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            OutlinedButton(
+            val closeInteraction = remember { MutableInteractionSource() }
+            val isClosePressed by closeInteraction.collectIsPressedAsState()
+            val closeScale by animateFloatAsState(
+                targetValue = if (isClosePressed) 0.96f else 1f,
+                animationSpec = motion.fastSpatial,
+                label = "CloseButtonScale"
+            )
+            ElevatedButton(
                 onClick = onDismiss,
                 shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
+                interactionSource = closeInteraction,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .graphicsLayer {
+                        scaleX = closeScale
+                        scaleY = closeScale
+                    }
             ) {
-                Text("Close Preview")
+                Text(
+                    "Close Preview",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
     }
