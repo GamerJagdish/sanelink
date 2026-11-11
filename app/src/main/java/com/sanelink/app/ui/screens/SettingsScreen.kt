@@ -11,6 +11,16 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -56,6 +66,7 @@ import com.sanelink.app.ui.components.ExpressiveLeadingBadge
 import com.sanelink.app.ui.components.ExpressiveSegmentedListItem
 import com.sanelink.app.ui.components.ExpressiveSwitch
 import com.sanelink.app.ui.components.LocalHazeState
+import com.sanelink.app.ui.theme.LocalMotionScheme
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
 
@@ -136,14 +147,31 @@ fun SettingsScreen(
                     )
                 },
                 supporting = {
+                    val motionScheme = LocalMotionScheme.current
                     Column {
-                        if (!isServiceEnabled) {
-                            Text(
-                                text = "Android 10+ restricts background clipboard access to active foreground apps. While this service monitors window transitions to detect copied links, background reading may be blocked by system security. For guaranteed cleaning, use the Quick Settings tile, Share Sheet, or Text Selection menu.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(14.dp))
+                        AnimatedVisibility(
+                            visible = !isServiceEnabled,
+                            enter = expandVertically(
+                                animationSpec = spring(
+                                    dampingRatio = motionScheme.defaultSpatial.dampingRatio,
+                                    stiffness = motionScheme.defaultSpatial.stiffness
+                                )
+                            ) + fadeIn(animationSpec = motionScheme.fastEffects),
+                            exit = shrinkVertically(
+                                animationSpec = spring(
+                                    dampingRatio = motionScheme.defaultSpatial.dampingRatio,
+                                    stiffness = motionScheme.defaultSpatial.stiffness
+                                )
+                            ) + fadeOut(animationSpec = motionScheme.fastEffects)
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Android 10+ restricts background clipboard access to active foreground apps. While this service monitors window transitions to detect copied links, background reading may be blocked by system security. For guaranteed cleaning, use the Quick Settings tile, Share Sheet, or Text Selection menu.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(14.dp))
+                            }
                         }
 
                         FilledTonalButton(
@@ -154,13 +182,27 @@ fun SettingsScreen(
                             shape = RoundedCornerShape(14.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(if (isServiceEnabled) "Setup Done" else "Configure in System Settings")
-                            Spacer(modifier = Modifier.size(8.dp))
-                            Icon(
-                                painter = painterResource(if (isServiceEnabled) R.drawable.ic_check else R.drawable.ic_open_in_new),
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
+                            AnimatedContent(
+                                targetState = isServiceEnabled,
+                                transitionSpec = {
+                                    (scaleIn(animationSpec = motionScheme.fastSpatial) + fadeIn(animationSpec = motionScheme.fastEffects))
+                                        .togetherWith(scaleOut(animationSpec = motionScheme.fastSpatial) + fadeOut(animationSpec = motionScheme.fastEffects))
+                                },
+                                label = "serviceButtonState"
+                            ) { enabled ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Text(if (enabled) "Setup Done" else "Configure in System Settings")
+                                    Spacer(modifier = Modifier.size(8.dp))
+                                    Icon(
+                                        painter = painterResource(if (enabled) R.drawable.ic_check else R.drawable.ic_open_in_new),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
