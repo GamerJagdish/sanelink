@@ -11,6 +11,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -246,12 +248,12 @@ fun ExpressiveStatsRow(
     ) {
         StatCard(
             label = "Cleaned",
-            value = stats.linksCleaned.toString(),
+            value = stats.linksCleaned,
             modifier = Modifier.weight(1f)
         )
         StatCard(
             label = "Trackers Removed",
-            value = stats.trackersRemoved.toString(),
+            value = stats.trackersRemoved,
             modifier = Modifier.weight(1f)
         )
     }
@@ -260,11 +262,25 @@ fun ExpressiveStatsRow(
 @Composable
 private fun StatCard(
     label: String,
-    value: String,
+    value: Long,
     modifier: Modifier = Modifier
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val motionScheme = LocalMotionScheme.current
+
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = motionScheme.fastSpatial,
+        label = "statCardScale"
+    )
+
     Card(
-        modifier = modifier,
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            },
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
@@ -273,7 +289,9 @@ private fun StatCard(
         border = BorderStroke(
             1.dp,
             MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-        )
+        ),
+        interactionSource = interactionSource,
+        onClick = {}
     ) {
         Column(
             modifier = Modifier.padding(18.dp)
@@ -284,12 +302,30 @@ private fun StatCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Black,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            AnimatedContent(
+                targetState = value,
+                transitionSpec = {
+                    val offsetSpec = spring<androidx.compose.ui.unit.IntOffset>(
+                        dampingRatio = motionScheme.fastSpatial.dampingRatio,
+                        stiffness = motionScheme.fastSpatial.stiffness
+                    )
+                    if (targetState > initialState) {
+                        (slideInVertically(animationSpec = offsetSpec) { -it } + fadeIn(animationSpec = motionScheme.fastEffects))
+                            .togetherWith(slideOutVertically(animationSpec = offsetSpec) { it } + fadeOut(animationSpec = motionScheme.fastEffects))
+                    } else {
+                        (slideInVertically(animationSpec = offsetSpec) { it } + fadeIn(animationSpec = motionScheme.fastEffects))
+                            .togetherWith(slideOutVertically(animationSpec = offsetSpec) { -it } + fadeOut(animationSpec = motionScheme.fastEffects))
+                    }
+                },
+                label = "statCounter"
+            ) { count ->
+                Text(
+                    text = count.toString(),
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
     }
 }
