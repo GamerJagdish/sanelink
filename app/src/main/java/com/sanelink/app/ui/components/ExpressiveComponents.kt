@@ -7,10 +7,12 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
@@ -403,10 +405,29 @@ fun ExpressiveSandboxCard(
                 )
             )
 
+            val motionScheme = LocalMotionScheme.current
+            val copyInteractionSource = remember { MutableInteractionSource() }
+            val isCopyPressed by copyInteractionSource.collectIsPressedAsState()
+            val copyScale by animateFloatAsState(
+                targetValue = if (isCopyPressed) 0.96f else 1f,
+                animationSpec = motionScheme.fastSpatial,
+                label = "copyCleanScale"
+            )
+
             AnimatedVisibility(
                 visible = result != null && result.wasModified,
-                enter = fadeIn(),
-                exit = fadeOut()
+                enter = expandVertically(
+                    animationSpec = spring(
+                        dampingRatio = motionScheme.defaultSpatial.dampingRatio,
+                        stiffness = motionScheme.defaultSpatial.stiffness
+                    )
+                ) + fadeIn(animationSpec = motionScheme.fastEffects),
+                exit = shrinkVertically(
+                    animationSpec = spring(
+                        dampingRatio = motionScheme.defaultSpatial.dampingRatio,
+                        stiffness = motionScheme.defaultSpatial.stiffness
+                    )
+                ) + fadeOut(animationSpec = motionScheme.fastEffects)
             ) {
                 Column(modifier = Modifier.padding(top = 16.dp)) {
                     // Removed parameters badges
@@ -486,7 +507,13 @@ fun ExpressiveSandboxCard(
 
                         ElevatedButton(
                             onClick = { onCopyClean(result.cleanText) },
-                            modifier = Modifier.fillMaxWidth(),
+                            interactionSource = copyInteractionSource,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .graphicsLayer {
+                                    scaleX = copyScale
+                                    scaleY = copyScale
+                                },
                             shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.elevatedButtonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
