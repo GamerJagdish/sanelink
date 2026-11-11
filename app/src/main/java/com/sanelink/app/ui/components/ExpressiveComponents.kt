@@ -1,5 +1,6 @@
 package com.sanelink.app.ui.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
@@ -8,6 +9,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -77,6 +81,7 @@ import com.sanelink.app.R
 import com.sanelink.app.core.model.SanitizationStats
 import com.sanelink.app.core.model.SanitizerResult
 import com.sanelink.app.ui.theme.GoogleSansCode
+import com.sanelink.app.ui.theme.LocalMotionScheme
 
 @Composable
 fun ExpressiveSwitch(
@@ -85,16 +90,26 @@ fun ExpressiveSwitch(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
+    val motionScheme = LocalMotionScheme.current
     Switch(
         checked = checked,
         onCheckedChange = onCheckedChange,
         enabled = enabled,
         thumbContent = {
-            Icon(
-                painter = painterResource(if (checked) R.drawable.ic_check else R.drawable.ic_close),
-                contentDescription = null,
-                modifier = Modifier.size(SwitchDefaults.IconSize)
-            )
+            AnimatedContent(
+                targetState = checked,
+                transitionSpec = {
+                    (scaleIn(animationSpec = motionScheme.fastSpatial) + fadeIn(animationSpec = motionScheme.fastEffects))
+                        .togetherWith(scaleOut(animationSpec = motionScheme.fastSpatial) + fadeOut(animationSpec = motionScheme.fastEffects))
+                },
+                label = "switchThumbMorph"
+            ) { isChecked ->
+                Icon(
+                    painter = painterResource(if (isChecked) R.drawable.ic_check else R.drawable.ic_close),
+                    contentDescription = null,
+                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                )
+            }
         },
         colors = SwitchDefaults.colors(
             checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
@@ -115,12 +130,11 @@ fun HeroProtectionCard(
     onToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val motionScheme = LocalMotionScheme.current
+
     val scale by animateFloatAsState(
         targetValue = if (isEnabled) 1.0f else 0.98f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
+        animationSpec = motionScheme.defaultSpatial,
         label = "heroScale"
     )
 
@@ -130,6 +144,7 @@ fun HeroProtectionCard(
         } else {
             MaterialTheme.colorScheme.surfaceContainer
         },
+        animationSpec = motionScheme.defaultColorEffects,
         label = "containerColor"
     )
 
@@ -139,6 +154,7 @@ fun HeroProtectionCard(
         } else {
             MaterialTheme.colorScheme.onSurface
         },
+        animationSpec = motionScheme.fastColorEffects,
         label = "contentColor"
     )
 
@@ -175,14 +191,23 @@ fun HeroProtectionCard(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        painter = painterResource(
-                            if (isEnabled) R.drawable.ic_sentiment_calm else R.drawable.ic_sentiment_extremely_dissatisfied
-                        ),
-                        contentDescription = null,
-                        tint = if (isEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(28.dp)
-                    )
+                    AnimatedContent(
+                        targetState = isEnabled,
+                        transitionSpec = {
+                            (scaleIn(animationSpec = motionScheme.fastSpatial) + fadeIn(animationSpec = motionScheme.fastEffects))
+                                .togetherWith(scaleOut(animationSpec = motionScheme.fastSpatial) + fadeOut(animationSpec = motionScheme.fastEffects))
+                        },
+                        label = "heroIconTransition"
+                    ) { enabled ->
+                        Icon(
+                            painter = painterResource(
+                                if (enabled) R.drawable.ic_sentiment_calm else R.drawable.ic_sentiment_extremely_dissatisfied
+                            ),
+                            contentDescription = null,
+                            tint = if (enabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(16.dp))
@@ -505,22 +530,17 @@ fun ExpressiveConnectedButtonGroup(
             } else {
                 1f - 0.15f
             }
+            val motionScheme = LocalMotionScheme.current
             val animatedWeight by animateFloatAsState(
                 targetValue = baseWeight + pressDelta,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                ),
+                animationSpec = motionScheme.fastSpatial,
                 label = "btnGroupWeight_$index"
             )
 
             // Tactile press scale feedback (squish & bounce)
             val pressScale by animateFloatAsState(
                 targetValue = if (isPressed) 0.96f else 1f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                ),
+                animationSpec = motionScheme.fastSpatial,
                 label = "btnGroupPressScale_$index"
             )
 
@@ -530,7 +550,7 @@ fun ExpressiveConnectedButtonGroup(
                 } else {
                     MaterialTheme.colorScheme.surfaceContainerHigh
                 },
-                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                animationSpec = motionScheme.defaultColorEffects,
                 label = "btnGroupBg_$index"
             )
 
@@ -540,7 +560,7 @@ fun ExpressiveConnectedButtonGroup(
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
                 },
-                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                animationSpec = motionScheme.fastColorEffects,
                 label = "btnGroupContent_$index"
             )
 
@@ -555,8 +575,8 @@ fun ExpressiveConnectedButtonGroup(
                     else -> innerRadius // Non-leading left is connected
                 },
                 animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMediumLow
+                    dampingRatio = motionScheme.fastSpatial.dampingRatio,
+                    stiffness = motionScheme.fastSpatial.stiffness
                 ),
                 label = "startRadius_$index"
             )
@@ -568,8 +588,8 @@ fun ExpressiveConnectedButtonGroup(
                     else -> innerRadius // Non-trailing right is connected
                 },
                 animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMediumLow
+                    dampingRatio = motionScheme.fastSpatial.dampingRatio,
+                    stiffness = motionScheme.fastSpatial.stiffness
                 ),
                 label = "endRadius_$index"
             )
@@ -766,6 +786,8 @@ fun ExpressiveConnectedIconButtonGroup(
     val deleteInteractionSource = remember { MutableInteractionSource() }
     val isDeletePressed by deleteInteractionSource.collectIsPressedAsState()
 
+    val motionScheme = LocalMotionScheme.current
+
     // Real-time neighbor width compression with spring physics
     val editWidth by animateDpAsState(
         targetValue = when {
@@ -774,8 +796,8 @@ fun ExpressiveConnectedIconButtonGroup(
             else -> 38.dp
         },
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow
+            dampingRatio = motionScheme.fastSpatial.dampingRatio,
+            stiffness = motionScheme.fastSpatial.stiffness
         ),
         label = "editWidth"
     )
@@ -787,8 +809,8 @@ fun ExpressiveConnectedIconButtonGroup(
             else -> 38.dp
         },
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow
+            dampingRatio = motionScheme.fastSpatial.dampingRatio,
+            stiffness = motionScheme.fastSpatial.stiffness
         ),
         label = "deleteWidth"
     )
@@ -796,19 +818,13 @@ fun ExpressiveConnectedIconButtonGroup(
     // Tactile press scale (squish & bounce)
     val editPressScale by animateFloatAsState(
         targetValue = if (isEditPressed) 0.94f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow
-        ),
+        animationSpec = motionScheme.fastSpatial,
         label = "editPressScale"
     )
 
     val deletePressScale by animateFloatAsState(
         targetValue = if (isDeletePressed) 0.94f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow
-        ),
+        animationSpec = motionScheme.fastSpatial,
         label = "deletePressScale"
     )
 
@@ -916,14 +932,12 @@ fun ExpressiveFloatingButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val motionScheme = LocalMotionScheme.current
 
     // Tactile press scale feedback with M3 Expressive bouncy spring
     val pressScale by animateFloatAsState(
         targetValue = if (isPressed) 0.96f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow
-        ),
+        animationSpec = motionScheme.fastSpatial,
         label = "floatingBtnScale"
     )
 
@@ -931,8 +945,8 @@ fun ExpressiveFloatingButton(
     val cornerRadius by animateDpAsState(
         targetValue = if (isPressed) 18.dp else 26.dp,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow
+            dampingRatio = motionScheme.fastSpatial.dampingRatio,
+            stiffness = motionScheme.fastSpatial.stiffness
         ),
         label = "floatingBtnCornerRadius"
     )
@@ -1060,14 +1074,12 @@ fun ExpressiveSegmentedListItem(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val motionScheme = LocalMotionScheme.current
 
     // Tactile press scale feedback with M3 Expressive bouncy spring
     val pressScale by animateFloatAsState(
         targetValue = if (isPressed && onClick != null) 0.98f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow
-        ),
+        animationSpec = motionScheme.fastSpatial,
         label = "segmentedItemScale"
     )
 
@@ -1075,8 +1087,8 @@ fun ExpressiveSegmentedListItem(
     val innerRadius by animateDpAsState(
         targetValue = if (isPressed && onClick != null) 10.dp else 4.dp,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow
+            dampingRatio = motionScheme.fastSpatial.dampingRatio,
+            stiffness = motionScheme.fastSpatial.stiffness
         ),
         label = "segmentedItemInnerRadius"
     )

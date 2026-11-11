@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sanelink.app.core.model.CustomRule
 import com.sanelink.app.ui.theme.GoogleSansCode
+import com.sanelink.app.ui.theme.LocalMotionScheme
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -135,6 +136,7 @@ fun AddEditCustomRuleScreen(
 
                     val closeInteractionSource = remember { MutableInteractionSource() }
                     val isClosePressed by closeInteractionSource.collectIsPressedAsState()
+                    val motionScheme = LocalMotionScheme.current
 
                     // M3 Expressive Spring Width Physics (70% Save / 30% Close baseline with neighbor compression)
                     val saveTargetWeight = when {
@@ -149,47 +151,35 @@ fun AddEditCustomRuleScreen(
                     }
                     val animatedSaveWeight by animateFloatAsState(
                         targetValue = saveTargetWeight,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMediumLow
-                        ),
+                        animationSpec = motionScheme.fastSpatial,
                         label = "saveWeight"
                     )
                     val animatedCloseWeight by animateFloatAsState(
                         targetValue = closeTargetWeight,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMediumLow
-                        ),
+                        animationSpec = motionScheme.fastSpatial,
                         label = "closeWeight"
                     )
 
                     // Tactile press scale feedback (squish & bounce)
                     val savePressScale by animateFloatAsState(
                         targetValue = if (isSavePressed && canSave) 0.96f else 1f,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMediumLow
-                        ),
+                        animationSpec = motionScheme.fastSpatial,
                         label = "savePressScale"
                     )
                     val closePressScale by animateFloatAsState(
                         targetValue = if (isClosePressed) 0.96f else 1f,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMediumLow
-                        ),
+                        animationSpec = motionScheme.fastSpatial,
                         label = "closePressScale"
                     )
 
-                    // Color transitions
+                    // Color transitions (Effects springs: critical damping, no overshoot)
                     val saveBgColor by animateColorAsState(
                         targetValue = if (canSave) {
                             MaterialTheme.colorScheme.primary
                         } else {
                             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
                         },
-                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                        animationSpec = motionScheme.defaultColorEffects,
                         label = "saveBgColor"
                     )
                     val saveContentColor by animateColorAsState(
@@ -198,7 +188,7 @@ fun AddEditCustomRuleScreen(
                         } else {
                             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                         },
-                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                        animationSpec = motionScheme.fastColorEffects,
                         label = "saveContentColor"
                     )
 

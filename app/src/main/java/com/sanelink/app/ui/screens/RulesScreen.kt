@@ -79,6 +79,7 @@ import com.sanelink.app.ui.components.ExpressiveSearchBar
 import com.sanelink.app.ui.components.ExpressiveSwitch
 import com.sanelink.app.ui.components.LocalHazeState
 import com.sanelink.app.ui.theme.GoogleSansCode
+import com.sanelink.app.ui.theme.LocalMotionScheme
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
 
@@ -443,21 +444,19 @@ private fun BuiltInProviderCard(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val motionScheme = LocalMotionScheme.current
 
     val pressScale by animateFloatAsState(
         targetValue = if (isPressed) 0.98f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow
-        ),
+        animationSpec = motionScheme.fastSpatial,
         label = "providerPressScale"
     )
 
     val cornerRadius by animateDpAsState(
         targetValue = if (isPressed) 16.dp else 22.dp,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow
+            dampingRatio = motionScheme.fastSpatial.dampingRatio,
+            stiffness = motionScheme.fastSpatial.stiffness
         ),
         label = "providerCornerRadius"
     )
@@ -468,7 +467,7 @@ private fun BuiltInProviderCard(
         } else {
             MaterialTheme.colorScheme.surfaceContainerLow
         },
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        animationSpec = motionScheme.defaultColorEffects,
         label = "providerContainerColor"
     )
 
@@ -478,7 +477,7 @@ private fun BuiltInProviderCard(
         } else {
             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         },
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        animationSpec = motionScheme.fastColorEffects,
         label = "providerTitleColor"
     )
 
@@ -631,21 +630,19 @@ private fun CustomRuleCard(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val motionScheme = LocalMotionScheme.current
 
     val pressScale by animateFloatAsState(
         targetValue = if (isPressed) 0.98f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow
-        ),
+        animationSpec = motionScheme.fastSpatial,
         label = "customRulePressScale"
     )
 
     val cornerRadius by animateDpAsState(
         targetValue = if (isPressed) 16.dp else 22.dp,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow
+            dampingRatio = motionScheme.fastSpatial.dampingRatio,
+            stiffness = motionScheme.fastSpatial.stiffness
         ),
         label = "customRuleCornerRadius"
     )
@@ -656,7 +653,7 @@ private fun CustomRuleCard(
         } else {
             MaterialTheme.colorScheme.surfaceContainerLow
         },
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        animationSpec = motionScheme.defaultColorEffects,
         label = "customRuleContainerColor"
     )
 
@@ -666,7 +663,7 @@ private fun CustomRuleCard(
         } else {
             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         },
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        animationSpec = motionScheme.fastColorEffects,
         label = "customRuleTitleColor"
     )
 

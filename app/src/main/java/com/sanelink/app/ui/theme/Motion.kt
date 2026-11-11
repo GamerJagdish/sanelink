@@ -5,6 +5,7 @@ import androidx.compose.animation.core.SpringSpec
 import androidx.compose.animation.core.spring
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 
 /**
  * Material 3 Expressive Motion Scheme.
@@ -31,12 +32,22 @@ data class SaneLinkMotionScheme(
         stiffness = Spring.StiffnessVeryLow
     ),
 
-    // Effects Springs (Color transitions, alpha fades, state layers)
+    // Effects Springs (Alpha fades, state layers)
     val fastEffects: SpringSpec<Float> = spring(
         dampingRatio = Spring.DampingRatioNoBouncy,
         stiffness = Spring.StiffnessMedium
     ),
     val defaultEffects: SpringSpec<Float> = spring(
+        dampingRatio = Spring.DampingRatioNoBouncy,
+        stiffness = Spring.StiffnessMediumLow
+    ),
+
+    // Color Effects Springs (Critically damped color transitions)
+    val fastColorEffects: SpringSpec<Color> = spring(
+        dampingRatio = Spring.DampingRatioNoBouncy,
+        stiffness = Spring.StiffnessMedium
+    ),
+    val defaultColorEffects: SpringSpec<Color> = spring(
         dampingRatio = Spring.DampingRatioNoBouncy,
         stiffness = Spring.StiffnessMediumLow
     )
