@@ -103,6 +103,7 @@ fun HomeScreen(
         // Material 3 Expressive Floating "Paste Link" button with spring physics and frosted blur
         ExpressiveFloatingButton(
             text = "Paste Link",
+            icon = painterResource(R.drawable.ic_content_copy),
             onClick = {
                 val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                 val clip = cm?.primaryClip
