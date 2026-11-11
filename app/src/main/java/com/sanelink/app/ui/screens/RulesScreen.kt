@@ -236,108 +236,56 @@ fun RulesScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
 
-                                // Material 3 Expressive Split Button (Connected Action + Secondary Reset)
-                                val splitToggleInteraction = remember { MutableInteractionSource() }
-                                val isTogglePressed by splitToggleInteraction.collectIsPressedAsState()
-                                val splitResetInteraction = remember { MutableInteractionSource() }
-                                val isResetPressed by splitResetInteraction.collectIsPressedAsState()
+                                // Material 3 Expressive Bulk Rules Toggle Button
+                                val toggleInteraction = remember { MutableInteractionSource() }
+                                val isTogglePressed by toggleInteraction.collectIsPressedAsState()
 
                                 val toggleScale by animateFloatAsState(
                                     targetValue = if (isTogglePressed) 0.96f else 1f,
                                     animationSpec = motionScheme.fastSpatial,
-                                    label = "splitToggleScale"
-                                )
-                                val resetScale by animateFloatAsState(
-                                    targetValue = if (isResetPressed) 0.94f else 1f,
-                                    animationSpec = motionScheme.fastSpatial,
-                                    label = "splitResetScale"
+                                    label = "bulkToggleScale"
                                 )
 
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    // Primary Split Button: Enable All / Disable All
-                                    Surface(
-                                        onClick = {
-                                            scope.launch {
-                                                if (allBuiltInDisabled) {
-                                                    app.repository.enableAllProviders()
-                                                } else {
-                                                    app.repository.disableAllProviders()
-                                                }
-                                            }
-                                        },
-                                        interactionSource = splitToggleInteraction,
-                                        shape = RoundedCornerShape(
-                                            topStart = 14.dp,
-                                            bottomStart = 14.dp,
-                                            topEnd = 4.dp,
-                                            bottomEnd = 4.dp
-                                        ),
-                                        color = if (allBuiltInDisabled) {
-                                            MaterialTheme.colorScheme.primaryContainer
-                                        } else {
-                                            MaterialTheme.colorScheme.surfaceContainerHigh
-                                        },
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                                        modifier = Modifier.graphicsLayer {
-                                            scaleX = toggleScale
-                                            scaleY = toggleScale
-                                        }
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(if (allBuiltInDisabled) R.drawable.ic_check else R.drawable.ic_close),
-                                                contentDescription = null,
-                                                modifier = Modifier.size(14.dp),
-                                                tint = if (allBuiltInDisabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text(
-                                                text = if (allBuiltInDisabled) "Enable All" else "Disable All",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (allBuiltInDisabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    }
-
-                                    // Secondary Split Button: Reset to Defaults
-                                    Surface(
-                                        onClick = {
-                                            scope.launch {
+                                Surface(
+                                    onClick = {
+                                        scope.launch {
+                                            if (allBuiltInDisabled) {
                                                 app.repository.enableAllProviders()
+                                            } else {
+                                                app.repository.disableAllProviders()
                                             }
-                                        },
-                                        interactionSource = splitResetInteraction,
-                                        shape = RoundedCornerShape(
-                                            topStart = 4.dp,
-                                            bottomStart = 4.dp,
-                                            topEnd = 14.dp,
-                                            bottomEnd = 14.dp
-                                        ),
-                                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                                        modifier = Modifier.graphicsLayer {
-                                            scaleX = resetScale
-                                            scaleY = resetScale
                                         }
+                                    },
+                                    interactionSource = toggleInteraction,
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (allBuiltInDisabled) {
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceContainerHigh
+                                    },
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                                    modifier = Modifier.graphicsLayer {
+                                        scaleX = toggleScale
+                                        scaleY = toggleScale
+                                    }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Box(
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.ic_refresh),
-                                                contentDescription = "Reset rules to default",
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.size(14.dp)
-                                            )
-                                        }
+                                        Icon(
+                                            painter = painterResource(if (allBuiltInDisabled) R.drawable.ic_check else R.drawable.ic_close),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp),
+                                            tint = if (allBuiltInDisabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = if (allBuiltInDisabled) "Enable All" else "Disable All",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (allBuiltInDisabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
                                 }
                             }
