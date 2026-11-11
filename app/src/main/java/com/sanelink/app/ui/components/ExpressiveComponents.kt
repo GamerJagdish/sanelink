@@ -411,8 +411,17 @@ private fun StatCard(
             ) { count ->
                 Text(
                     text = count.toString(),
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Black,
+                    style = MaterialTheme.typography.headlineLarge.copy(
+                        fontFamily = googleSansFlex(
+                            weight = 900,
+                            width = 118f,
+                            roundness = 20f,
+                            opticalSize = 34f
+                        ),
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight(900),
+                        letterSpacing = (-0.5).sp
+                    ),
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }

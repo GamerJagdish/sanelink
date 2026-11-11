@@ -236,5 +236,133 @@ val AppTypography = Typography(
         fontSize = 11.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.5.sp
-    )
+    ),
+    displayLargeEmphasized = EmphasizedTypography.displayLarge,
+    displayMediumEmphasized = EmphasizedTypography.displayMedium,
+    displaySmallEmphasized = EmphasizedTypography.displaySmall,
+    headlineLargeEmphasized = EmphasizedTypography.headlineLarge,
+    headlineMediumEmphasized = EmphasizedTypography.headlineMedium,
+    headlineSmallEmphasized = EmphasizedTypography.headlineSmall,
+    titleLargeEmphasized = EmphasizedTypography.titleLarge,
+    titleMediumEmphasized = EmphasizedTypography.titleMedium,
+    titleSmallEmphasized = EmphasizedTypography.titleSmall,
+    bodyLargeEmphasized = EmphasizedTypography.bodyLarge,
+    bodyMediumEmphasized = EmphasizedTypography.bodyMedium,
+    bodySmallEmphasized = EmphasizedTypography.bodySmall,
+    labelLargeEmphasized = EmphasizedTypography.labelLarge,
+    labelMediumEmphasized = EmphasizedTypography.labelMedium,
+    labelSmallEmphasized = EmphasizedTypography.labelSmall
 )
+
+/**
+ * Material 3 Expressive Emphasized Typography Styles.
+ * Introduces the 15 emphasized type roles from the M3 Expressive type system,
+ * utilizing Google Sans Flex variable weight, width stretch, and optical sizing.
+ */
+object EmphasizedTypography {
+    val displayLarge = TextStyle(
+        fontFamily = GoogleSansExpressive,
+        fontWeight = FontWeight(950),
+        fontSize = 57.sp,
+        lineHeight = 64.sp,
+        letterSpacing = (-0.25).sp
+    )
+    val displayMedium = TextStyle(
+        fontFamily = GoogleSansExpressive,
+        fontWeight = FontWeight(900),
+        fontSize = 45.sp,
+        lineHeight = 52.sp,
+        letterSpacing = 0.sp
+    )
+    val displaySmall = TextStyle(
+        fontFamily = GoogleSansExpressive,
+        fontWeight = FontWeight(900),
+        fontSize = 36.sp,
+        lineHeight = 44.sp,
+        letterSpacing = 0.sp
+    )
+    val headlineLarge = TextStyle(
+        fontFamily = GoogleSans,
+        fontWeight = FontWeight(900),
+        fontSize = 32.sp,
+        lineHeight = 40.sp,
+        letterSpacing = (-0.2).sp
+    )
+    val headlineMedium = TextStyle(
+        fontFamily = GoogleSans,
+        fontWeight = FontWeight(800),
+        fontSize = 28.sp,
+        lineHeight = 36.sp,
+        letterSpacing = (-0.1).sp
+    )
+    val headlineSmall = TextStyle(
+        fontFamily = GoogleSans,
+        fontWeight = FontWeight(800),
+        fontSize = 24.sp,
+        lineHeight = 32.sp,
+        letterSpacing = 0.sp
+    )
+    val titleLarge = TextStyle(
+        fontFamily = GoogleSans,
+        fontWeight = FontWeight(800),
+        fontSize = 22.sp,
+        lineHeight = 28.sp,
+        letterSpacing = 0.sp
+    )
+    val titleMedium = TextStyle(
+        fontFamily = GoogleSans,
+        fontWeight = FontWeight.Bold,
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
+        letterSpacing = 0.15.sp
+    )
+    val titleSmall = TextStyle(
+        fontFamily = GoogleSans,
+        fontWeight = FontWeight.Bold,
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        letterSpacing = 0.1.sp
+    )
+    val bodyLarge = TextStyle(
+        fontFamily = GoogleSans,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
+        letterSpacing = 0.5.sp
+    )
+    val bodyMedium = TextStyle(
+        fontFamily = GoogleSans,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        letterSpacing = 0.25.sp
+    )
+    val bodySmall = TextStyle(
+        fontFamily = GoogleSans,
+        fontWeight = FontWeight.Medium,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.4.sp
+    )
+    val labelLarge = TextStyle(
+        fontFamily = GoogleSans,
+        fontWeight = FontWeight.Bold,
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        letterSpacing = 0.1.sp
+    )
+    val labelMedium = TextStyle(
+        fontFamily = GoogleSans,
+        fontWeight = FontWeight.Bold,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.5.sp
+    )
+    val labelSmall = TextStyle(
+        fontFamily = GoogleSans,
+        fontWeight = FontWeight.Bold,
+        fontSize = 11.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.5.sp
+    )
+}
