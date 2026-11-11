@@ -21,6 +21,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
@@ -80,6 +82,7 @@ import com.sanelink.app.ui.screens.RulesScreen
 import com.sanelink.app.ui.screens.SettingsScreen
 import com.sanelink.app.ui.theme.LocalMotionScheme
 import com.sanelink.app.ui.theme.SaneLinkTheme
+import com.sanelink.app.ui.theme.rememberReducedMotion
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -127,19 +130,29 @@ class MainActivity : ComponentActivity() {
                 val isEditingRule = isAddingCustomRule || editingCustomRule != null
 
                 val motionScheme = LocalMotionScheme.current
+                val isReducedMotion = rememberReducedMotion()
 
-                // Material 3 Expressive full-page forward/backward spring transition
+                // Material 3 Expressive forward/backward shared axis container transition
                 AnimatedContent(
                     targetState = isEditingRule,
                     transitionSpec = {
-                        if (targetState) {
-                            // Forward navigation into Add/Edit Custom Rule screen (slides in from right)
+                        if (isReducedMotion) {
+                            fadeIn(animationSpec = motionScheme.fastEffects)
+                                .togetherWith(fadeOut(animationSpec = motionScheme.fastEffects))
+                        } else if (targetState) {
+                            // Forward hierarchical navigation into Custom Rule editor (M3 Shared Axis scale + slide)
                             (slideInHorizontally(
                                 animationSpec = spring(
                                     dampingRatio = motionScheme.defaultSpatial.dampingRatio,
                                     stiffness = motionScheme.defaultSpatial.stiffness
                                 ),
-                                initialOffsetX = { fullWidth -> fullWidth }
+                                initialOffsetX = { fullWidth -> fullWidth / 4 }
+                            ) + scaleIn(
+                                animationSpec = spring(
+                                    dampingRatio = motionScheme.defaultSpatial.dampingRatio,
+                                    stiffness = motionScheme.defaultSpatial.stiffness
+                                ),
+                                initialScale = 0.92f
                             ) + fadeIn(
                                 animationSpec = motionScheme.fastEffects
                             )).togetherWith(
@@ -148,19 +161,31 @@ class MainActivity : ComponentActivity() {
                                         dampingRatio = motionScheme.defaultSpatial.dampingRatio,
                                         stiffness = motionScheme.defaultSpatial.stiffness
                                     ),
-                                    targetOffsetX = { fullWidth -> -fullWidth / 4 }
+                                    targetOffsetX = { fullWidth -> -fullWidth / 6 }
+                                ) + scaleOut(
+                                    animationSpec = spring(
+                                        dampingRatio = motionScheme.defaultSpatial.dampingRatio,
+                                        stiffness = motionScheme.defaultSpatial.stiffness
+                                    ),
+                                    targetScale = 0.95f
                                 ) + fadeOut(
                                     animationSpec = motionScheme.fastEffects
                                 )
                             )
                         } else {
-                            // Backward navigation returning to main screen (slides out to right)
+                            // Backward navigation returning to main screen
                             (slideInHorizontally(
                                 animationSpec = spring(
                                     dampingRatio = motionScheme.defaultSpatial.dampingRatio,
                                     stiffness = motionScheme.defaultSpatial.stiffness
                                 ),
-                                initialOffsetX = { fullWidth -> -fullWidth / 4 }
+                                initialOffsetX = { fullWidth -> -fullWidth / 6 }
+                            ) + scaleIn(
+                                animationSpec = spring(
+                                    dampingRatio = motionScheme.defaultSpatial.dampingRatio,
+                                    stiffness = motionScheme.defaultSpatial.stiffness
+                                ),
+                                initialScale = 0.95f
                             ) + fadeIn(
                                 animationSpec = motionScheme.fastEffects
                             )).togetherWith(
@@ -169,7 +194,13 @@ class MainActivity : ComponentActivity() {
                                         dampingRatio = motionScheme.defaultSpatial.dampingRatio,
                                         stiffness = motionScheme.defaultSpatial.stiffness
                                     ),
-                                    targetOffsetX = { fullWidth -> fullWidth }
+                                    targetOffsetX = { fullWidth -> fullWidth / 4 }
+                                ) + scaleOut(
+                                    animationSpec = spring(
+                                        dampingRatio = motionScheme.defaultSpatial.dampingRatio,
+                                        stiffness = motionScheme.defaultSpatial.stiffness
+                                    ),
+                                    targetScale = 0.92f
                                 ) + fadeOut(
                                     animationSpec = motionScheme.fastEffects
                                 )
@@ -214,31 +245,36 @@ class MainActivity : ComponentActivity() {
                                             },
                                             modifier = Modifier.fillMaxWidth(),
                                             transitionSpec = {
-                                                (slideInVertically(
-                                                    animationSpec = spring(
-                                                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                        stiffness = Spring.StiffnessMediumLow
-                                                    ),
-                                                    initialOffsetY = { -it / 2 }
-                                                ) + fadeIn(
-                                                    animationSpec = spring(
-                                                        dampingRatio = Spring.DampingRatioNoBouncy,
-                                                        stiffness = Spring.StiffnessMediumLow
-                                                    )
-                                                )).togetherWith(
-                                                    slideOutVertically(
+                                                if (isReducedMotion) {
+                                                    fadeIn(animationSpec = motionScheme.fastEffects)
+                                                        .togetherWith(fadeOut(animationSpec = motionScheme.fastEffects))
+                                                } else {
+                                                    (slideInVertically(
+                                                        animationSpec = spring(
+                                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                            stiffness = Spring.StiffnessMediumLow
+                                                        ),
+                                                        initialOffsetY = { -it / 2 }
+                                                    ) + fadeIn(
                                                         animationSpec = spring(
                                                             dampingRatio = Spring.DampingRatioNoBouncy,
                                                             stiffness = Spring.StiffnessMediumLow
-                                                        ),
-                                                        targetOffsetY = { it / 2 }
-                                                    ) + fadeOut(
-                                                        animationSpec = spring(
-                                                            dampingRatio = Spring.DampingRatioNoBouncy,
-                                                            stiffness = Spring.StiffnessMedium
+                                                        )
+                                                    )).togetherWith(
+                                                        slideOutVertically(
+                                                            animationSpec = spring(
+                                                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                                                stiffness = Spring.StiffnessMediumLow
+                                                            ),
+                                                            targetOffsetY = { it / 2 }
+                                                        ) + fadeOut(
+                                                            animationSpec = spring(
+                                                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                                                stiffness = Spring.StiffnessMedium
+                                                            )
                                                         )
                                                     )
-                                                )
+                                                }
                                             },
                                             label = "topBarTitleTransition"
                                         ) { titleText ->
@@ -267,32 +303,37 @@ class MainActivity : ComponentActivity() {
                                         AnimatedContent(
                                             targetState = selectedTab,
                                             transitionSpec = {
-                                                val direction = if (targetState > initialState) 1 else -1
-                                                (slideInHorizontally(
-                                                    animationSpec = spring(
-                                                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                        stiffness = Spring.StiffnessLow
-                                                    ),
-                                                    initialOffsetX = { fullWidth -> direction * (fullWidth / 4) }
-                                                ) + fadeIn(
-                                                    animationSpec = spring(
-                                                        dampingRatio = Spring.DampingRatioNoBouncy,
-                                                        stiffness = Spring.StiffnessMediumLow
-                                                    )
-                                                )).togetherWith(
-                                                    slideOutHorizontally(
+                                                if (isReducedMotion) {
+                                                    fadeIn(animationSpec = motionScheme.fastEffects)
+                                                        .togetherWith(fadeOut(animationSpec = motionScheme.fastEffects))
+                                                } else {
+                                                    val direction = if (targetState > initialState) 1 else -1
+                                                    (slideInHorizontally(
+                                                        animationSpec = spring(
+                                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                            stiffness = Spring.StiffnessLow
+                                                        ),
+                                                        initialOffsetX = { fullWidth -> direction * (fullWidth / 4) }
+                                                    ) + fadeIn(
                                                         animationSpec = spring(
                                                             dampingRatio = Spring.DampingRatioNoBouncy,
                                                             stiffness = Spring.StiffnessMediumLow
-                                                        ),
-                                                        targetOffsetX = { fullWidth -> -direction * (fullWidth / 4) }
-                                                    ) + fadeOut(
-                                                        animationSpec = spring(
-                                                            dampingRatio = Spring.DampingRatioNoBouncy,
-                                                            stiffness = Spring.StiffnessMedium
+                                                        )
+                                                    )).togetherWith(
+                                                        slideOutHorizontally(
+                                                            animationSpec = spring(
+                                                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                                                stiffness = Spring.StiffnessMediumLow
+                                                            ),
+                                                            targetOffsetX = { fullWidth -> -direction * (fullWidth / 4) }
+                                                        ) + fadeOut(
+                                                            animationSpec = spring(
+                                                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                                                stiffness = Spring.StiffnessMedium
+                                                            )
                                                         )
                                                     )
-                                                )
+                                                }
                                             },
                                             label = "tabContentTransition"
                                         ) { tab ->

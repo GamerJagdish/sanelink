@@ -1,11 +1,15 @@
 package com.sanelink.app.ui.theme
 
+import android.provider.Settings
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.SpringSpec
 import androidx.compose.animation.core.spring
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 
 /**
  * Material 3 Expressive Motion Scheme.
@@ -57,3 +61,29 @@ data class SaneLinkMotionScheme(
  * CompositionLocal providing the current [SaneLinkMotionScheme].
  */
 val LocalMotionScheme = staticCompositionLocalOf { SaneLinkMotionScheme() }
+
+/**
+ * Detects whether the user or system has enabled "Remove animations" / "Reduced Motion"
+ * in Android Accessibility settings, as mandated by Material 3 Motion guidelines.
+ */
+@Composable
+fun rememberReducedMotion(): Boolean {
+    val context = LocalContext.current
+    return remember(context) {
+        try {
+            val animScale = Settings.Global.getFloat(
+                context.contentResolver,
+                Settings.Global.ANIMATOR_DURATION_SCALE,
+                1f
+            )
+            val transScale = Settings.Global.getFloat(
+                context.contentResolver,
+                Settings.Global.TRANSITION_ANIMATION_SCALE,
+                1f
+            )
+            animScale == 0f || transScale == 0f
+        } catch (_: Exception) {
+            false
+        }
+    }
+}
