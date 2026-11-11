@@ -72,6 +72,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sanelink.app.R
@@ -111,6 +112,15 @@ fun RulesScreen(
 
     // Dialog / Bottom Sheet state for previewing built-in rule
     var previewProvider by remember { mutableStateOf<Pair<String, ProviderRule>?>(null) }
+
+    val motionScheme = LocalMotionScheme.current
+    val itemPlacementSpec = remember(motionScheme) {
+        spring<IntOffset>(
+            dampingRatio = motionScheme.defaultSpatial.dampingRatio,
+            stiffness = motionScheme.defaultSpatial.stiffness
+        )
+    }
+    val itemFadeSpec = motionScheme.fastEffects
 
     val providersList = remember(clearUrlsData, searchQuery) {
         val all = clearUrlsData.providers.toList()
@@ -370,7 +380,11 @@ fun RulesScreen(
                                             onClick = {
                                                 previewProvider = name to rule
                                             },
-                                            modifier = Modifier.animateItem()
+                                            modifier = Modifier.animateItem(
+                                                fadeInSpec = itemFadeSpec,
+                                                placementSpec = itemPlacementSpec,
+                                                fadeOutSpec = itemFadeSpec
+                                            )
                                         )
                                     }
                                 }
@@ -484,7 +498,11 @@ fun RulesScreen(
                                         onDelete = {
                                             scope.launch { app.repository.deleteCustomRule(rule.id) }
                                         },
-                                        modifier = Modifier.animateItem()
+                                        modifier = Modifier.animateItem(
+                                            fadeInSpec = itemFadeSpec,
+                                            placementSpec = itemPlacementSpec,
+                                            fadeOutSpec = itemFadeSpec
+                                        )
                                     )
                                 }
                             }
