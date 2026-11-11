@@ -93,6 +93,7 @@ fun SaneLinkTheme(
         MaterialTheme(
             colorScheme = colorScheme,
             typography = AppTypography,
+            shapes = ExpressiveShapes,
             content = content
         )
     }
