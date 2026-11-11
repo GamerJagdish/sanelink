@@ -15,6 +15,16 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -108,73 +118,186 @@ class MainActivity : ComponentActivity() {
                 // Full-screen page navigation state for Add/Edit Custom Rule
                 var isAddingCustomRule by remember { mutableStateOf(false) }
                 var editingCustomRule by remember { mutableStateOf<CustomRule?>(null) }
+                val isEditingRule = isAddingCustomRule || editingCustomRule != null
 
-                // If on Add/Edit Custom Rule page: render full page with NO main topbar and NO bottom navbar!
-                if (isAddingCustomRule || editingCustomRule != null) {
-                    BackHandler {
-                        isAddingCustomRule = false
-                        editingCustomRule = null
-                    }
-
-                    AddEditCustomRuleScreen(
-                        ruleToEdit = editingCustomRule,
-                        onBack = {
-                            isAddingCustomRule = false
-                            editingCustomRule = null
-                        },
-                        onSave = { rule ->
-                            scope.launch {
-                                SaneLinkApp.instance.repository.saveCustomRule(rule)
-                                rulesSubTab = 1 // Immediately return to the Custom tab to see the saved/updated rule
-                                isAddingCustomRule = false
-                                editingCustomRule = null
-                            }
-                        }
-                    )
-                } else {
-                    Scaffold(
-                        modifier = Modifier.fillMaxSize(),
-                        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                        topBar = {
-                            CenterAlignedTopAppBar(
-                                title = {
-                                    Text(
-                                        text = when (selectedTab) {
-                                            0 -> "SaneLink"
-                                            1 -> "Sanitization Rules"
-                                            else -> "Settings"
-                                        },
-                                        fontWeight = FontWeight.Black,
-                                        style = MaterialTheme.typography.titleLarge
+                // Material 3 Expressive full-page spring transition
+                AnimatedContent(
+                    targetState = isEditingRule,
+                    transitionSpec = {
+                        if (targetState) {
+                            (slideInVertically(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                ),
+                                initialOffsetY = { fullHeight -> fullHeight / 4 }
+                            ) + fadeIn(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            )).togetherWith(
+                                fadeOut(
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                        stiffness = Spring.StiffnessMedium
                                     )
-                                },
-                                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                                    containerColor = MaterialTheme.colorScheme.background
+                                )
+                            )
+                        } else {
+                            fadeIn(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            ).togetherWith(
+                                slideOutVertically(
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                        stiffness = Spring.StiffnessMediumLow
+                                    ),
+                                    targetOffsetY = { fullHeight -> fullHeight / 4 }
+                                ) + fadeOut(
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                        stiffness = Spring.StiffnessMedium
+                                    )
                                 )
                             )
                         }
-                    ) { innerPadding ->
-                        val hazeState = rememberHazeState()
+                    },
+                    label = "ruleEditorTransition"
+                ) { editing ->
+                    if (editing) {
+                        BackHandler {
+                            isAddingCustomRule = false
+                            editingCustomRule = null
+                        }
 
-                        CompositionLocalProvider(LocalHazeState provides hazeState) {
-                            Box(modifier = Modifier.fillMaxSize()) {
-                                // Edge-to-edge screen content (scrolls underneath the floating nav bar and floating buttons)
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(top = innerPadding.calculateTopPadding())
-                                ) {
-                                    when (selectedTab) {
-                                        0 -> HomeScreen()
-                                        1 -> RulesScreen(
-                                            selectedSubTab = rulesSubTab,
-                                            onSubTabChanged = { rulesSubTab = it },
-                                            onAddCustomRule = { isAddingCustomRule = true },
-                                            onEditCustomRule = { rule -> editingCustomRule = rule }
-                                        )
-                                        2 -> SettingsScreen()
-                                    }
+                        AddEditCustomRuleScreen(
+                            ruleToEdit = editingCustomRule,
+                            onBack = {
+                                isAddingCustomRule = false
+                                editingCustomRule = null
+                            },
+                            onSave = { rule ->
+                                scope.launch {
+                                    SaneLinkApp.instance.repository.saveCustomRule(rule)
+                                    rulesSubTab = 1 // Immediately return to the Custom tab to see the saved/updated rule
+                                    isAddingCustomRule = false
+                                    editingCustomRule = null
                                 }
+                            }
+                        )
+                    } else {
+                        Scaffold(
+                            modifier = Modifier.fillMaxSize(),
+                            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                            topBar = {
+                                CenterAlignedTopAppBar(
+                                    title = {
+                                        AnimatedContent(
+                                            targetState = when (selectedTab) {
+                                                0 -> "SaneLink"
+                                                1 -> "Sanitization Rules"
+                                                else -> "Settings"
+                                            },
+                                            transitionSpec = {
+                                                (slideInVertically(
+                                                    animationSpec = spring(
+                                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                        stiffness = Spring.StiffnessMediumLow
+                                                    ),
+                                                    initialOffsetY = { -it / 2 }
+                                                ) + fadeIn(
+                                                    animationSpec = spring(
+                                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                                        stiffness = Spring.StiffnessMediumLow
+                                                    )
+                                                )).togetherWith(
+                                                    slideOutVertically(
+                                                        animationSpec = spring(
+                                                            dampingRatio = Spring.DampingRatioNoBouncy,
+                                                            stiffness = Spring.StiffnessMediumLow
+                                                        ),
+                                                        targetOffsetY = { it / 2 }
+                                                    ) + fadeOut(
+                                                        animationSpec = spring(
+                                                            dampingRatio = Spring.DampingRatioNoBouncy,
+                                                            stiffness = Spring.StiffnessMedium
+                                                        )
+                                                    )
+                                                )
+                                            },
+                                            label = "topBarTitleTransition"
+                                        ) { titleText ->
+                                            Text(
+                                                text = titleText,
+                                                fontWeight = FontWeight.Black,
+                                                style = MaterialTheme.typography.titleLarge
+                                            )
+                                        }
+                                    },
+                                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                                        containerColor = MaterialTheme.colorScheme.background
+                                    )
+                                )
+                            }
+                        ) { innerPadding ->
+                            val hazeState = rememberHazeState()
+
+                            CompositionLocalProvider(LocalHazeState provides hazeState) {
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    // Edge-to-edge screen content with spring-driven directional tab transition
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(top = innerPadding.calculateTopPadding())
+                                    ) {
+                                        AnimatedContent(
+                                            targetState = selectedTab,
+                                            transitionSpec = {
+                                                val direction = if (targetState > initialState) 1 else -1
+                                                (slideInHorizontally(
+                                                    animationSpec = spring(
+                                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                        stiffness = Spring.StiffnessLow
+                                                    ),
+                                                    initialOffsetX = { fullWidth -> direction * (fullWidth / 4) }
+                                                ) + fadeIn(
+                                                    animationSpec = spring(
+                                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                                        stiffness = Spring.StiffnessMediumLow
+                                                    )
+                                                )).togetherWith(
+                                                    slideOutHorizontally(
+                                                        animationSpec = spring(
+                                                            dampingRatio = Spring.DampingRatioNoBouncy,
+                                                            stiffness = Spring.StiffnessMediumLow
+                                                        ),
+                                                        targetOffsetX = { fullWidth -> -direction * (fullWidth / 4) }
+                                                    ) + fadeOut(
+                                                        animationSpec = spring(
+                                                            dampingRatio = Spring.DampingRatioNoBouncy,
+                                                            stiffness = Spring.StiffnessMedium
+                                                        )
+                                                    )
+                                                )
+                                            },
+                                            label = "tabContentTransition"
+                                        ) { tab ->
+                                            when (tab) {
+                                                0 -> HomeScreen()
+                                                1 -> RulesScreen(
+                                                    selectedSubTab = rulesSubTab,
+                                                    onSubTabChanged = { rulesSubTab = it },
+                                                    onAddCustomRule = { isAddingCustomRule = true },
+                                                    onEditCustomRule = { rule -> editingCustomRule = rule }
+                                                )
+                                                2 -> SettingsScreen()
+                                            }
+                                        }
+                                    }
 
                                 // Floating Expressive Frosted Blur Navigation Bar
                                 val navBarShape = RoundedCornerShape(32.dp)
@@ -256,6 +379,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
 }
 
     override fun onNewIntent(intent: Intent) {
