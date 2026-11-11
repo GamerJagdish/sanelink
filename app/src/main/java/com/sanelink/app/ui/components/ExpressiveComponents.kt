@@ -26,6 +26,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -74,10 +75,17 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.chrisbanes.haze.HazeInput
@@ -92,6 +100,7 @@ import com.sanelink.app.core.model.SanitizationStats
 import com.sanelink.app.core.model.SanitizerResult
 import com.sanelink.app.ui.theme.GoogleSansCode
 import com.sanelink.app.ui.theme.LocalMotionScheme
+import com.sanelink.app.ui.theme.googleSansFlex
 
 @Composable
 fun ExpressiveSwitch(
@@ -1316,5 +1325,125 @@ fun ExpressiveSegmentedListItem(
         ) {
             itemContent()
         }
+    }
+}
+
+/**
+ * Auto-fitting title text using Google Sans Flex variable font.
+ * Automatically detects when the title text overflows the available width (e.g. on high-DPI screens
+ * or larger font scales) and dynamically scales down the font size and width axis so that the title
+ * fits completely on a single line without being cut off.
+ */
+@Composable
+fun AutoFitTitleText(
+    text: String,
+    modifier: Modifier = Modifier,
+    targetFontSize: TextUnit = 24.sp,
+    minFontSize: TextUnit = 13.sp,
+    targetWeight: Int = 1000,
+    targetWidth: Float = 151f,
+    minWidth: Float = 60f,
+    roundness: Float = 10f,
+    letterSpacing: TextUnit = 0.5.sp,
+    color: Color = Color.Unspecified,
+    textAlign: TextAlign = TextAlign.Center
+) {
+    BoxWithConstraints(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        val density = LocalDensity.current
+        val maxWidthPx = if (constraints.hasBoundedWidth && constraints.maxWidth > 0) {
+            constraints.maxWidth
+        } else {
+            with(density) { (LocalConfiguration.current.screenWidthDp.dp - 32.dp).roundToPx() }
+        }
+        val textMeasurer = rememberTextMeasurer()
+
+        val (bestSize, bestWidth) = remember(
+            text,
+            maxWidthPx,
+            targetFontSize,
+            minFontSize,
+            targetWeight,
+            targetWidth,
+            minWidth,
+            roundness,
+            density
+        ) {
+            if (text.isEmpty() || maxWidthPx <= 0) {
+                targetFontSize to targetWidth
+            } else {
+                fun measureText(fontSizeSp: Float, fontWidth: Float): Int {
+                    val style = TextStyle(
+                        fontFamily = googleSansFlex(
+                            weight = targetWeight,
+                            width = fontWidth,
+                            roundness = roundness,
+                            opticalSize = fontSizeSp
+                        ),
+                        fontSize = fontSizeSp.sp,
+                        fontWeight = FontWeight(targetWeight),
+                        letterSpacing = letterSpacing
+                    )
+                    return textMeasurer.measure(
+                        text = text,
+                        style = style,
+                        maxLines = 1,
+                        softWrap = false
+                    ).size.width
+                }
+
+                val initialWidth = measureText(targetFontSize.value, targetWidth)
+                if (initialWidth <= maxWidthPx) {
+                    targetFontSize to targetWidth
+                } else {
+                    // Overflow detected! Scale font size proportionally with a safe buffer
+                    val scaleFactor = (maxWidthPx.toFloat() / initialWidth.toFloat()) * 0.98f
+                    var candidateSp = (targetFontSize.value * scaleFactor).coerceAtLeast(minFontSize.value)
+                    var candidateWidth = targetWidth
+                    var currentWidth = measureText(candidateSp, candidateWidth)
+
+                    // If minFontSize is reached and text still overflows, scale down the font's wdth axis
+                    if (currentWidth > maxWidthPx && candidateSp <= minFontSize.value) {
+                        val widthScale = (maxWidthPx.toFloat() / currentWidth.toFloat()) * 0.98f
+                        candidateWidth = (targetWidth * widthScale).coerceIn(minWidth, targetWidth)
+                        currentWidth = measureText(candidateSp, candidateWidth)
+                    }
+
+                    // Fine-tuning pass to guarantee text fits strictly within maxWidthPx
+                    while (currentWidth > maxWidthPx && (candidateSp > minFontSize.value || candidateWidth > minWidth)) {
+                        if (candidateSp > minFontSize.value) {
+                            candidateSp = (candidateSp - 0.5f).coerceAtLeast(minFontSize.value)
+                        } else {
+                            candidateWidth = (candidateWidth - 5f).coerceAtLeast(minWidth)
+                        }
+                        currentWidth = measureText(candidateSp, candidateWidth)
+                    }
+
+                    candidateSp.sp to candidateWidth
+                }
+            }
+        }
+
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontFamily = googleSansFlex(
+                    weight = targetWeight,
+                    width = bestWidth,
+                    roundness = roundness,
+                    opticalSize = bestSize.value
+                ),
+                fontSize = bestSize,
+                fontWeight = FontWeight(targetWeight),
+                letterSpacing = letterSpacing,
+                color = color
+            ),
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = textAlign
+        )
     }
 }

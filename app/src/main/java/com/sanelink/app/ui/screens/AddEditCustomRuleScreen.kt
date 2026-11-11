@@ -57,6 +57,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sanelink.app.core.model.CustomRule
+import com.sanelink.app.ui.components.AutoFitTitleText
 import com.sanelink.app.ui.theme.GoogleSansCode
 import com.sanelink.app.ui.theme.LocalMotionScheme
 
@@ -105,10 +106,10 @@ fun AddEditCustomRuleScreen(
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Text(
-                        text = if (isEditing) "Edit Custom Rule" else "Add Custom Rule",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleLarge
+                    val titleText = if (isEditing) "Edit Custom Rule" else "Add Custom Rule"
+                    AutoFitTitleText(
+                        text = titleText,
+                        modifier = Modifier.padding(horizontal = 8.dp)
                     )
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(

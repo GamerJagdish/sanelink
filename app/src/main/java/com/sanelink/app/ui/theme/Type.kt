@@ -102,6 +102,28 @@ val GoogleSansExpressive = FontFamily(
     )
 )
 
+/**
+ * Creates a dynamic Google Sans Flex font family with custom weight (100-1000),
+ * width stretch (25-151), roundness (0-100), and optical size (opsz: 6-144).
+ */
+fun googleSansFlex(
+    weight: Int = 1000,
+    width: Float = 151f,
+    roundness: Float = 10f,
+    opticalSize: Float = 24f
+): FontFamily = FontFamily(
+    Font(
+        resId = R.font.google_sans_flex,
+        weight = FontWeight(weight),
+        variationSettings = FontVariation.Settings(
+            FontVariation.weight(weight),
+            FontVariation.width(width),
+            FontVariation.Setting("ROND", roundness),
+            FontVariation.Setting("opsz", opticalSize)
+        )
+    )
+)
+
 val GoogleSansCode = FontFamily(
     Font(R.font.google_sans_code, FontWeight.Normal),
     Font(R.font.google_sans_code, FontWeight.Medium),

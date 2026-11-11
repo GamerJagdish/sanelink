@@ -30,6 +30,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -62,6 +63,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.HazePerformanceMode
 import dev.chrisbanes.haze.blur.HazeBlurStyle
@@ -70,6 +72,7 @@ import dev.chrisbanes.haze.blur.material3.Material3
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import com.sanelink.app.core.model.CustomRule
+import com.sanelink.app.ui.components.AutoFitTitleText
 import com.sanelink.app.ui.components.LocalHazeState
 import com.sanelink.app.ui.screens.AddEditCustomRuleScreen
 import com.sanelink.app.ui.screens.HomeScreen
@@ -209,6 +212,7 @@ class MainActivity : ComponentActivity() {
                                                 1 -> "Sanitization Rules"
                                                 else -> "Settings"
                                             },
+                                            modifier = Modifier.fillMaxWidth(),
                                             transitionSpec = {
                                                 (slideInVertically(
                                                     animationSpec = spring(
@@ -238,10 +242,9 @@ class MainActivity : ComponentActivity() {
                                             },
                                             label = "topBarTitleTransition"
                                         ) { titleText ->
-                                            Text(
+                                            AutoFitTitleText(
                                                 text = titleText,
-                                                fontWeight = FontWeight.Black,
-                                                style = MaterialTheme.typography.titleLarge
+                                                modifier = Modifier.padding(horizontal = 8.dp)
                                             )
                                         }
                                     },
