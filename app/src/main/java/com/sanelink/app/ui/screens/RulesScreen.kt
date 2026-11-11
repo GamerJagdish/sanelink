@@ -1317,31 +1317,16 @@ private fun RulePreviewBottomSheet(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            val closeInteraction = remember { MutableInteractionSource() }
-            val isClosePressed by closeInteraction.collectIsPressedAsState()
-            val closeScale by animateFloatAsState(
-                targetValue = if (isClosePressed) 0.96f else 1f,
-                animationSpec = motion.fastSpatial,
-                label = "CloseButtonScale"
-            )
-            ElevatedButton(
+            ExpressiveFloatingButton(
+                text = "Close Preview",
                 onClick = onDismiss,
-                shape = RoundedCornerShape(16.dp),
-                interactionSource = closeInteraction,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .graphicsLayer {
-                        scaleX = closeScale
-                        scaleY = closeScale
-                    }
-            ) {
-                Text(
-                    "Close Preview",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
+                icon = painterResource(R.drawable.ic_close),
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                border = null,
+                hazeState = null,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
