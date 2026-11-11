@@ -1268,7 +1268,6 @@ private fun RulePreviewBottomSheet(
             ExpressiveFloatingButton(
                 text = "Close Preview",
                 onClick = onDismiss,
-                icon = painterResource(R.drawable.ic_close),
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 border = null,
