@@ -17,6 +17,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -57,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -326,51 +328,43 @@ class MainActivity : ComponentActivity() {
                                     tonalElevation = 0.dp,
                                     modifier = Modifier.height(64.dp)
                                 ) {
-                                    NavigationBarItem(
-                                        selected = selectedTab == 0,
-                                        onClick = { selectedTab = 0 },
-                                        icon = {
-                                            Icon(
-                                                painter = painterResource(R.drawable.ic_cleaning_services),
-                                                contentDescription = "Dashboard"
-                                            )
-                                        },
-                                        label = { Text("Dashboard", fontWeight = FontWeight.SemiBold) },
-                                        colors = NavigationBarItemDefaults.colors(
-                                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                        )
+                                    val navItems = listOf(
+                                        Triple("Dashboard", R.drawable.ic_cleaning_services, 0),
+                                        Triple("Rules", R.drawable.ic_shield, 1),
+                                        Triple("Settings", R.drawable.ic_settings, 2)
                                     )
-                                    NavigationBarItem(
-                                        selected = selectedTab == 1,
-                                        onClick = { selectedTab = 1 },
-                                        icon = {
-                                            Icon(
-                                                painter = painterResource(R.drawable.ic_shield),
-                                                contentDescription = "Rules"
-                                            )
-                                        },
-                                        label = { Text("Rules", fontWeight = FontWeight.SemiBold) },
-                                        colors = NavigationBarItemDefaults.colors(
-                                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer
+
+                                    navItems.forEach { (title, iconRes, index) ->
+                                        val isSelected = selectedTab == index
+                                        val iconScale by animateFloatAsState(
+                                            targetValue = if (isSelected) 1.15f else 1.0f,
+                                            animationSpec = spring(
+                                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                stiffness = Spring.StiffnessMediumLow
+                                            ),
+                                            label = "navIconScale_$index"
                                         )
-                                    )
-                                    NavigationBarItem(
-                                        selected = selectedTab == 2,
-                                        onClick = { selectedTab = 2 },
-                                        icon = {
-                                            Icon(
-                                                painter = painterResource(R.drawable.ic_settings),
-                                                contentDescription = "Settings"
+
+                                        NavigationBarItem(
+                                            selected = isSelected,
+                                            onClick = { selectedTab = index },
+                                            icon = {
+                                                Icon(
+                                                    painter = painterResource(iconRes),
+                                                    contentDescription = title,
+                                                    modifier = Modifier.graphicsLayer {
+                                                        scaleX = iconScale
+                                                        scaleY = iconScale
+                                                    }
+                                                )
+                                            },
+                                            label = { Text(title, fontWeight = FontWeight.SemiBold) },
+                                            colors = NavigationBarItemDefaults.colors(
+                                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                                selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer
                                             )
-                                        },
-                                        label = { Text("Settings", fontWeight = FontWeight.SemiBold) },
-                                        colors = NavigationBarItemDefaults.colors(
-                                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer
                                         )
-                                    )
+                                    }
                                 }
                             }
                         }
