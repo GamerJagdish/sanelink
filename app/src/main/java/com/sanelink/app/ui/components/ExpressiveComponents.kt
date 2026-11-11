@@ -20,6 +20,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -59,7 +61,9 @@ import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,6 +72,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -997,16 +1003,28 @@ fun ExpressiveFloatingButton(
     val isPressed by interactionSource.collectIsPressedAsState()
     val motionScheme = LocalMotionScheme.current
 
-    // Tactile press scale feedback with M3 Expressive bouncy spring
-    val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.96f else 1f,
+    var dragOffsetX by remember { mutableFloatStateOf(0f) }
+    val animatedDragOffset by animateFloatAsState(
+        targetValue = dragOffsetX,
         animationSpec = motionScheme.fastSpatial,
-        label = "floatingBtnScale"
+        label = "floatingBtnDragOffset"
     )
 
-    // Dynamic M3 Expressive shape morphing: from smooth pill (26dp) to subtle squircle (18dp) on touch
+    // Tactile squish feedback: on press/drag, button squishes vertically and slightly expands horizontally
+    val pressScaleX by animateFloatAsState(
+        targetValue = if (isPressed) 0.98f else 1f,
+        animationSpec = motionScheme.fastSpatial,
+        label = "floatingBtnScaleX"
+    )
+    val pressScaleY by animateFloatAsState(
+        targetValue = if (isPressed) 0.92f else 1f,
+        animationSpec = motionScheme.fastSpatial,
+        label = "floatingBtnScaleY"
+    )
+
+    // Dynamic M3 Expressive shape morphing: from smooth pill (26dp) to tactile squircle (14dp) on touch
     val cornerRadius by animateDpAsState(
-        targetValue = if (isPressed) 18.dp else 26.dp,
+        targetValue = if (isPressed) 14.dp else 26.dp,
         animationSpec = spring(
             dampingRatio = motionScheme.fastSpatial.dampingRatio,
             stiffness = motionScheme.fastSpatial.stiffness
@@ -1029,8 +1047,28 @@ fun ExpressiveFloatingButton(
         interactionSource = interactionSource,
         modifier = modifier
             .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
+                scaleX = pressScaleX
+                scaleY = pressScaleY
+                translationX = animatedDragOffset
+            }
+            .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    val startX = down.position.x
+                    try {
+                        do {
+                            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                            val current = event.changes.firstOrNull { it.id == down.id } ?: break
+                            if (current.pressed) {
+                                val rawDelta = current.position.x - startX
+                                dragOffsetX = (rawDelta * 0.35f).coerceIn(-48f, 48f)
+                            }
+                        } while (event.changes.any { it.id == down.id && it.pressed })
+                    } finally {
+                        dragOffsetX = 0f
+                    }
+                }
             }
             .clip(shape)
             .then(

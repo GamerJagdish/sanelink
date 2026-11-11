@@ -240,10 +240,23 @@ fun RulesScreen(
                                 val toggleInteraction = remember { MutableInteractionSource() }
                                 val isTogglePressed by toggleInteraction.collectIsPressedAsState()
 
-                                val toggleScale by animateFloatAsState(
-                                    targetValue = if (isTogglePressed) 0.96f else 1f,
+                                val toggleScaleX by animateFloatAsState(
+                                    targetValue = if (isTogglePressed) 0.98f else 1f,
                                     animationSpec = motionScheme.fastSpatial,
-                                    label = "bulkToggleScale"
+                                    label = "bulkToggleScaleX"
+                                )
+                                val toggleScaleY by animateFloatAsState(
+                                    targetValue = if (isTogglePressed) 0.92f else 1f,
+                                    animationSpec = motionScheme.fastSpatial,
+                                    label = "bulkToggleScaleY"
+                                )
+                                val toggleCornerRadius by animateDpAsState(
+                                    targetValue = if (isTogglePressed) 8.dp else 12.dp,
+                                    animationSpec = spring(
+                                        dampingRatio = motionScheme.fastSpatial.dampingRatio,
+                                        stiffness = motionScheme.fastSpatial.stiffness
+                                    ),
+                                    label = "bulkToggleCornerRadius"
                                 )
 
                                 Surface(
@@ -257,7 +270,7 @@ fun RulesScreen(
                                         }
                                     },
                                     interactionSource = toggleInteraction,
-                                    shape = RoundedCornerShape(12.dp),
+                                    shape = RoundedCornerShape(toggleCornerRadius),
                                     color = if (allBuiltInDisabled) {
                                         MaterialTheme.colorScheme.primaryContainer
                                     } else {
@@ -265,8 +278,8 @@ fun RulesScreen(
                                     },
                                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
                                     modifier = Modifier.graphicsLayer {
-                                        scaleX = toggleScale
-                                        scaleY = toggleScale
+                                        scaleX = toggleScaleX
+                                        scaleY = toggleScaleY
                                     }
                                 ) {
                                     Row(
