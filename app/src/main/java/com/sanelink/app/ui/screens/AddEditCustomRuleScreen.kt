@@ -2,6 +2,7 @@ package com.sanelink.app.ui.screens
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -138,15 +139,15 @@ fun AddEditCustomRuleScreen(
                     val isClosePressed by closeInteractionSource.collectIsPressedAsState()
                     val motionScheme = LocalMotionScheme.current
 
-                    // M3 Expressive Spring Width Physics (70% Save / 30% Close baseline with neighbor compression)
+                    // M3 Expressive Spring Width Physics (70% Save / 30% Close baseline with 12% neighbor compression on touch)
                     val saveTargetWeight = when {
-                        isSavePressed && canSave -> 0.74f
-                        isClosePressed -> 0.65f
+                        isSavePressed && canSave -> 0.82f
+                        isClosePressed -> 0.58f
                         else -> 0.70f
                     }
                     val closeTargetWeight = when {
-                        isClosePressed -> 0.35f
-                        isSavePressed && canSave -> 0.26f
+                        isClosePressed -> 0.42f
+                        isSavePressed && canSave -> 0.18f
                         else -> 0.30f
                     }
                     val animatedSaveWeight by animateFloatAsState(
@@ -192,18 +193,38 @@ fun AddEditCustomRuleScreen(
                         label = "saveContentColor"
                     )
 
-                    // M3 Connected Button Group Shapes (24dp outer, 6dp connected inner)
+                    // Dynamic M3 Shape Morphing: transforms into standalone rounded pill on press / drag
+                    val fullRadius = 24.dp
+                    val innerRadius = 6.dp
+
+                    val saveEndRadius by animateDpAsState(
+                        targetValue = if (isSavePressed && canSave) fullRadius else innerRadius,
+                        animationSpec = spring(
+                            dampingRatio = motionScheme.fastSpatial.dampingRatio,
+                            stiffness = motionScheme.fastSpatial.stiffness
+                        ),
+                        label = "saveEndRadius"
+                    )
+                    val closeStartRadius by animateDpAsState(
+                        targetValue = if (isClosePressed) fullRadius else innerRadius,
+                        animationSpec = spring(
+                            dampingRatio = motionScheme.fastSpatial.dampingRatio,
+                            stiffness = motionScheme.fastSpatial.stiffness
+                        ),
+                        label = "closeStartRadius"
+                    )
+
                     val saveShape = RoundedCornerShape(
-                        topStart = 24.dp,
-                        bottomStart = 24.dp,
-                        topEnd = 6.dp,
-                        bottomEnd = 6.dp
+                        topStart = fullRadius,
+                        bottomStart = fullRadius,
+                        topEnd = saveEndRadius,
+                        bottomEnd = saveEndRadius
                     )
                     val closeShape = RoundedCornerShape(
-                        topStart = 6.dp,
-                        bottomStart = 6.dp,
-                        topEnd = 24.dp,
-                        bottomEnd = 24.dp
+                        topStart = closeStartRadius,
+                        bottomStart = closeStartRadius,
+                        topEnd = fullRadius,
+                        bottomEnd = fullRadius
                     )
 
                     Row(
