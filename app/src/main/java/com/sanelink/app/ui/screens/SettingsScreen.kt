@@ -13,6 +13,7 @@ import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
@@ -24,10 +25,13 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -49,6 +53,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,6 +61,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -178,13 +185,67 @@ fun SettingsScreen(
                             }
                         }
 
+                        val setupInteraction = remember { MutableInteractionSource() }
+                        val isSetupPressed by setupInteraction.collectIsPressedAsState()
+                        var setupDragOffsetX by remember { mutableFloatStateOf(0f) }
+                        val animatedSetupDragOffset by animateFloatAsState(
+                            targetValue = setupDragOffsetX,
+                            animationSpec = motionScheme.fastSpatial,
+                            label = "setupDragOffset"
+                        )
+
+                        val setupScaleX by animateFloatAsState(
+                            targetValue = if (isSetupPressed) 0.98f else 1f,
+                            animationSpec = motionScheme.fastSpatial,
+                            label = "setupScaleX"
+                        )
+                        val setupScaleY by animateFloatAsState(
+                            targetValue = if (isSetupPressed) 0.92f else 1f,
+                            animationSpec = motionScheme.fastSpatial,
+                            label = "setupScaleY"
+                        )
+                        val setupCornerRadius by animateDpAsState(
+                            targetValue = if (isSetupPressed) 14.dp else 24.dp,
+                            animationSpec = spring(
+                                dampingRatio = motionScheme.fastSpatial.dampingRatio,
+                                stiffness = motionScheme.fastSpatial.stiffness
+                            ),
+                            label = "setupCornerRadius"
+                        )
+
                         FilledTonalButton(
                             onClick = {
                                 val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
                                 context.startActivity(intent)
                             },
-                            shape = RoundedCornerShape(14.dp),
-                            modifier = Modifier.fillMaxWidth()
+                            interactionSource = setupInteraction,
+                            shape = RoundedCornerShape(setupCornerRadius),
+                            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .graphicsLayer {
+                                    scaleX = setupScaleX
+                                    scaleY = setupScaleY
+                                    translationX = animatedSetupDragOffset
+                                }
+                                .pointerInput(Unit) {
+                                    awaitEachGesture {
+                                        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                                        val startX = down.position.x
+                                        try {
+                                            do {
+                                                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                                                val current = event.changes.firstOrNull { it.id == down.id } ?: break
+                                                if (current.pressed) {
+                                                    val rawDelta = current.position.x - startX
+                                                    setupDragOffsetX = (rawDelta * 0.35f).coerceIn(-48f, 48f)
+                                                }
+                                            } while (event.changes.any { it.id == down.id && it.pressed })
+                                        } finally {
+                                            setupDragOffsetX = 0f
+                                        }
+                                    }
+                                }
                         ) {
                             AnimatedContent(
                                 targetState = isServiceEnabled,
@@ -198,7 +259,10 @@ fun SettingsScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Center
                                 ) {
-                                    Text(if (enabled) "Setup Done" else "Configure in System Settings")
+                                    Text(
+                                        text = if (enabled) "Setup Done" else "Configure in System Settings",
+                                        fontWeight = FontWeight.SemiBold
+                                    )
                                     Spacer(modifier = Modifier.size(8.dp))
                                     Icon(
                                         painter = painterResource(if (enabled) R.drawable.ic_check else R.drawable.ic_open_in_new),
@@ -479,10 +543,30 @@ fun SettingsScreen(
 
                     val ghInteraction = remember { MutableInteractionSource() }
                     val isGhPressed by ghInteraction.collectIsPressedAsState()
-                    val ghScale by animateFloatAsState(
-                        targetValue = if (isGhPressed) 0.96f else 1f,
+                    var ghDragOffsetX by remember { mutableFloatStateOf(0f) }
+                    val animatedGhDragOffset by animateFloatAsState(
+                        targetValue = ghDragOffsetX,
                         animationSpec = motionScheme.fastSpatial,
-                        label = "GhButtonScale"
+                        label = "ghDragOffset"
+                    )
+
+                    val ghScaleX by animateFloatAsState(
+                        targetValue = if (isGhPressed) 0.98f else 1f,
+                        animationSpec = motionScheme.fastSpatial,
+                        label = "ghScaleX"
+                    )
+                    val ghScaleY by animateFloatAsState(
+                        targetValue = if (isGhPressed) 0.92f else 1f,
+                        animationSpec = motionScheme.fastSpatial,
+                        label = "ghScaleY"
+                    )
+                    val ghCornerRadius by animateDpAsState(
+                        targetValue = if (isGhPressed) 14.dp else 24.dp,
+                        animationSpec = spring(
+                            dampingRatio = motionScheme.fastSpatial.dampingRatio,
+                            stiffness = motionScheme.fastSpatial.stiffness
+                        ),
+                        label = "ghCornerRadius"
                     )
 
                     FilledTonalButton(
@@ -493,13 +577,33 @@ fun SettingsScreen(
                             )
                             context.startActivity(intent)
                         },
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(ghCornerRadius),
                         interactionSource = ghInteraction,
+                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .graphicsLayer {
-                                scaleX = ghScale
-                                scaleY = ghScale
+                                scaleX = ghScaleX
+                                scaleY = ghScaleY
+                                translationX = animatedGhDragOffset
+                            }
+                            .pointerInput(Unit) {
+                                awaitEachGesture {
+                                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                                    val startX = down.position.x
+                                    try {
+                                        do {
+                                            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                                            val current = event.changes.firstOrNull { it.id == down.id } ?: break
+                                            if (current.pressed) {
+                                                val rawDelta = current.position.x - startX
+                                                ghDragOffsetX = (rawDelta * 0.35f).coerceIn(-48f, 48f)
+                                            }
+                                        } while (event.changes.any { it.id == down.id && it.pressed })
+                                    } finally {
+                                        ghDragOffsetX = 0f
+                                    }
+                                }
                             }
                     ) {
                         Icon(
@@ -508,7 +612,10 @@ fun SettingsScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.size(8.dp))
-                        Text("Source Code on GitHub")
+                        Text(
+                            text = "Source Code on GitHub",
+                            fontWeight = FontWeight.SemiBold
+                        )
                         Spacer(modifier = Modifier.size(8.dp))
                         Icon(
                             painter = painterResource(R.drawable.ic_open_in_new),
