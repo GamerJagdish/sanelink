@@ -13,6 +13,7 @@ import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -23,6 +24,8 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -52,6 +55,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -78,6 +82,7 @@ fun SettingsScreen(
     val app = SaneLinkApp.instance
     val scope = rememberCoroutineScope()
     val hazeState = LocalHazeState.current
+    val motionScheme = LocalMotionScheme.current
 
     var showAboutDialog by remember { mutableStateOf(false) }
 
@@ -147,7 +152,6 @@ fun SettingsScreen(
                     )
                 },
                 supporting = {
-                    val motionScheme = LocalMotionScheme.current
                     Column {
                         AnimatedVisibility(
                             visible = !isServiceEnabled,
@@ -473,6 +477,14 @@ fun SettingsScreen(
                         }
                     }
 
+                    val ghInteraction = remember { MutableInteractionSource() }
+                    val isGhPressed by ghInteraction.collectIsPressedAsState()
+                    val ghScale by animateFloatAsState(
+                        targetValue = if (isGhPressed) 0.96f else 1f,
+                        animationSpec = motionScheme.fastSpatial,
+                        label = "GhButtonScale"
+                    )
+
                     FilledTonalButton(
                         onClick = {
                             val intent = Intent(
@@ -481,8 +493,14 @@ fun SettingsScreen(
                             )
                             context.startActivity(intent)
                         },
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        shape = RoundedCornerShape(16.dp),
+                        interactionSource = ghInteraction,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .graphicsLayer {
+                                scaleX = ghScale
+                                scaleY = ghScale
+                            }
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_code),
@@ -507,7 +525,7 @@ fun SettingsScreen(
                     Text("Close")
                 }
             },
-            shape = RoundedCornerShape(28.dp),
+            shape = RoundedCornerShape(32.dp),
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     }
