@@ -222,12 +222,31 @@ fun HeroProtectionCard(
         label = "contentColor"
     )
 
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    val targetRadius = when {
+        isPressed -> 18.dp
+        isEnabled -> 32.dp
+        else -> 20.dp
+    }
+
+    val cornerRadius by animateDpAsState(
+        targetValue = targetRadius,
+        animationSpec = spring(
+            dampingRatio = motionScheme.defaultSpatial.dampingRatio,
+            stiffness = motionScheme.defaultSpatial.stiffness
+        ),
+        label = "heroCornerRadius"
+    )
+
     Card(
         onClick = { onToggle(!isEnabled) },
+        interactionSource = interactionSource,
         modifier = modifier
             .fillMaxWidth()
             .scale(scale),
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(cornerRadius),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         border = BorderStroke(
@@ -337,13 +356,22 @@ private fun StatCard(
         label = "statCardScale"
     )
 
+    val cornerRadius by animateDpAsState(
+        targetValue = if (isPressed) 14.dp else 24.dp,
+        animationSpec = spring(
+            dampingRatio = motionScheme.fastSpatial.dampingRatio,
+            stiffness = motionScheme.fastSpatial.stiffness
+        ),
+        label = "statCardCornerRadius"
+    )
+
     Card(
         modifier = modifier
             .graphicsLayer {
                 scaleX = pressScale
                 scaleY = pressScale
             },
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(cornerRadius),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
