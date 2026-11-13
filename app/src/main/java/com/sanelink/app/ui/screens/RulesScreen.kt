@@ -62,6 +62,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -81,6 +82,7 @@ import com.sanelink.app.R
 import com.sanelink.app.SaneLinkApp
 import com.sanelink.app.core.model.CustomRule
 import com.sanelink.app.core.model.ProviderRule
+import com.sanelink.app.core.model.UserPatch
 import com.sanelink.app.ui.components.ExpressiveConnectedButtonGroup
 import com.sanelink.app.ui.components.ExpressiveConnectedButtonItem
 import com.sanelink.app.ui.components.ExpressiveConnectedIconButtonGroup
@@ -113,6 +115,7 @@ fun RulesScreen(
     val userPatchedProviderIds by app.repository.userPatchedProviderIds.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
+    var showOnlyPatched by remember { mutableStateOf(false) }
 
     // Dialog / Bottom Sheet state for previewing built-in rule
     var previewProvider by remember { mutableStateOf<Pair<String, ProviderRule>?>(null) }
@@ -127,16 +130,21 @@ fun RulesScreen(
     }
     val itemFadeSpec = motionScheme.fastEffects
 
-    val providersList = remember(clearUrlsData, searchQuery) {
+    val providersList = remember(clearUrlsData, searchQuery, showOnlyPatched, bundledPatchedProviderIds, userPatchedProviderIds) {
         val all = clearUrlsData.providers.toList()
-        if (searchQuery.isBlank()) {
-            all
-        } else {
-            all.filter { (name, rule) ->
+        var filtered = all
+        if (showOnlyPatched) {
+            filtered = filtered.filter { (name, _) ->
+                bundledPatchedProviderIds.contains(name) || userPatchedProviderIds.contains(name)
+            }
+        }
+        if (searchQuery.isNotBlank()) {
+            filtered = filtered.filter { (name, rule) ->
                 name.contains(searchQuery, ignoreCase = true) ||
                         rule.urlPattern.contains(searchQuery, ignoreCase = true)
             }
         }
+        filtered
     }
 
     val filteredCustomRules = remember(customRules, searchQuery) {
@@ -243,13 +251,42 @@ fun RulesScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                val activeCount = clearUrlsData.providers.size - disabledProviderIds.size
-                                Text(
-                                    text = if (searchQuery.isBlank()) "$activeCount active rules" else "${providersList.size} matching rules",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    val activeCount = clearUrlsData.providers.size - disabledProviderIds.size
+                                    Text(
+                                        text = when {
+                                            showOnlyPatched -> "${providersList.size} patched"
+                                            searchQuery.isNotBlank() -> "${providersList.size} matching"
+                                            else -> "$activeCount active"
+                                        },
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+
+                                    val patchedCount = (bundledPatchedProviderIds + userPatchedProviderIds).size
+                                    Surface(
+                                        onClick = { showOnlyPatched = !showOnlyPatched },
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = if (showOnlyPatched) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        border = BorderStroke(
+                                            1.dp,
+                                            if (showOnlyPatched) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                                        )
+                                    ) {
+                                        Text(
+                                            text = "Patched ($patchedCount)",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 11.sp,
+                                            color = if (showOnlyPatched) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                }
 
                                 // Material 3 Expressive Bulk Rules Toggle Button
                                 val toggleInteraction = remember { MutableInteractionSource() }
@@ -558,6 +595,21 @@ fun RulesScreen(
                 }
             },
             onDismiss = { previewProvider = null }
+        )
+    }
+
+    // Interactive Provider Patch Editor Modal Bottom Sheet
+    editingPatchProvider?.let { (name, rule) ->
+        PatchProviderBottomSheet(
+            providerId = name,
+            rule = rule,
+            onSave = { patch ->
+                scope.launch {
+                    app.repository.saveUserPatch(patch)
+                    editingPatchProvider = null
+                }
+            },
+            onDismiss = { editingPatchProvider = null }
         )
     }
 }
@@ -1565,4 +1617,393 @@ private fun formatProviderName(key: String): String {
                 word.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
             }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun PatchProviderBottomSheet(
+    providerId: String,
+    rule: ProviderRule,
+    onSave: (UserPatch) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val app = SaneLinkApp.instance
+    val existingPatch = remember(providerId) { app.repository.getUserPatch(providerId) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    val baseRules = remember(rule) { (rule.rules + rule.referralMarketing).distinct() }
+    val removedRules = remember(existingPatch) {
+        mutableStateListOf<String>().apply {
+            existingPatch?.removedRules?.let { addAll(it) }
+        }
+    }
+    val addedRules = remember(existingPatch) {
+        mutableStateListOf<String>().apply {
+            existingPatch?.addedRules?.let { addAll(it) }
+        }
+    }
+    var newParamInput by remember { mutableStateOf("") }
+
+    // Live Simulator for patch testing
+    val defaultDummy = remember(providerId, rule) { generateDummyUrl(providerId, rule) }
+    var testUrlInput by remember(defaultDummy) { mutableStateOf(defaultDummy) }
+
+    // Compute live active parameters based on (baseRules - removedRules) + addedRules
+    val activeStripParams = remember(baseRules, removedRules.toList(), addedRules.toList()) {
+        (baseRules.filterNot { removedRules.contains(it) } + addedRules).distinct()
+    }
+
+    val simulatedResult = remember(testUrlInput, activeStripParams) {
+        simulateSanitization(testUrlInput, activeStripParams)
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 36.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Patch ${formatProviderName(providerId)}",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Customize stripped parameters for this site",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // Live Simulator Card
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "LIVE PATCH PREVIEW",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = 1.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = testUrlInput,
+                        onValueChange = { testUrlInput = it },
+                        label = { Text("Sample URL") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        maxLines = 3,
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(
+                            fontFamily = GoogleSansCode,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    if (simulatedResult.second.isNotEmpty()) {
+                        Text(
+                            text = "STRIPPED BY YOUR PATCH",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            letterSpacing = 1.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f))
+                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                                .padding(12.dp)
+                        ) {
+                            Text(
+                                text = simulatedResult.first,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontFamily = GoogleSansCode,
+                                    fontWeight = FontWeight.Medium,
+                                    letterSpacing = 0.2.sp
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            simulatedResult.second.forEach { p ->
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f))
+                                        .padding(horizontal = 7.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "-$p",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontFamily = GoogleSansCode,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = "URL is clean / No parameters removed",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontFamily = GoogleSansCode,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // Add Custom Parameters to Strip
+            Text(
+                text = "ADD CUSTOM PARAMETERS TO STRIP",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                letterSpacing = 1.sp
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = newParamInput,
+                    onValueChange = { newParamInput = it },
+                    placeholder = { Text("e.g. tracking_id") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        fontFamily = GoogleSansCode
+                    )
+                )
+
+                ElevatedButton(
+                    onClick = {
+                        val trimmed = newParamInput.trim()
+                        if (trimmed.isNotBlank() && !addedRules.contains(trimmed)) {
+                            addedRules.add(trimmed)
+                            newParamInput = ""
+                        }
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = newParamInput.isNotBlank()
+                ) {
+                    Text("Add", fontWeight = FontWeight.Bold)
+                }
+            }
+
+            if (addedRules.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    addedRules.forEach { param ->
+                        Surface(
+                            onClick = { addedRules.remove(param) },
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "+$param",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontFamily = GoogleSansCode,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_close),
+                                    contentDescription = "Remove parameter",
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Built-in parameters toggle list
+            if (baseRules.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(18.dp))
+                Text(
+                    text = "BUILT-IN PARAMETERS (TAP TO KEEP)",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.secondary,
+                    letterSpacing = 1.sp
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Parameters shown as (Kept) will NOT be stripped for this site.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    baseRules.forEach { param ->
+                        val isKept = removedRules.contains(param)
+                        Surface(
+                            onClick = {
+                                if (isKept) {
+                                    removedRules.remove(param)
+                                } else {
+                                    removedRules.add(param)
+                                }
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isKept) {
+                                MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.6f)
+                            } else {
+                                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)
+                            },
+                            border = BorderStroke(
+                                1.dp,
+                                if (isKept) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f) else Color.Transparent
+                            )
+                        ) {
+                            Text(
+                                text = if (isKept) "$param (Kept)" else param,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontFamily = GoogleSansCode,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 11.sp
+                                ),
+                                color = if (isKept) {
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+                                } else {
+                                    MaterialTheme.colorScheme.onErrorContainer
+                                },
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Save Patch Button
+            ExpressiveFloatingButton(
+                text = "Save Patch",
+                onClick = {
+                    val patch = UserPatch(
+                        providerId = providerId,
+                        isEnabled = true,
+                        addedRules = addedRules.toList(),
+                        removedRules = removedRules.toList(),
+                        customUrlPattern = null,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                    onSave(patch)
+                },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                border = null,
+                hazeState = null,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            ExpressiveFloatingButton(
+                text = "Cancel",
+                onClick = onDismiss,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                border = null,
+                hazeState = null,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+private fun simulateSanitization(urlStr: String, activeParams: List<String>): Pair<String, List<String>> {
+    val uri = try { java.net.URI(urlStr) } catch (_: Exception) { return urlStr to emptyList() }
+    val rawQuery = uri.rawQuery ?: return urlStr to emptyList()
+
+    val removed = mutableListOf<String>()
+    val keptParams = mutableListOf<String>()
+
+    val regexes = activeParams.mapNotNull {
+        try { Regex("^$it$", RegexOption.IGNORE_CASE) } catch (_: Exception) { null }
+    }
+
+    val pairs = rawQuery.split("&")
+    for (pair in pairs) {
+        if (pair.isBlank()) continue
+        val idx = pair.indexOf("=")
+        val key = if (idx > 0) pair.substring(0, idx) else pair
+
+        val matchesRule = regexes.any { regex -> regex.matches(key) } ||
+                activeParams.any { it.equals(key, ignoreCase = true) }
+        if (matchesRule) {
+            removed.add(key)
+        } else {
+            keptParams.add(pair)
+        }
+    }
+
+    val newQuery = if (keptParams.isEmpty()) "" else "?" + keptParams.joinToString("&")
+    val scheme = uri.scheme ?: "https"
+    val host = uri.host ?: ""
+    val port = if (uri.port != -1 && uri.port != 80 && uri.port != 443) ":${uri.port}" else ""
+    val path = uri.rawPath ?: ""
+    val fragment = if (uri.rawFragment != null) "#${uri.rawFragment}" else ""
+
+    val newUrl = "$scheme://$host$port$path$newQuery$fragment"
+    return newUrl to removed
 }
