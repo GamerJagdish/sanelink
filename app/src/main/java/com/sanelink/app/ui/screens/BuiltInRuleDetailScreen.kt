@@ -61,7 +61,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -91,6 +93,7 @@ fun BuiltInRuleDetailScreen(
     val app = SaneLinkApp.instance
     val scope = rememberCoroutineScope()
     val motionScheme = LocalMotionScheme.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     val clearUrlsData by app.repository.clearUrlsData.collectAsState()
     val disabledProviderIds by app.repository.disabledProviderIds.collectAsState()
@@ -395,7 +398,9 @@ fun BuiltInRuleDetailScreen(
                                 value = testUrlInput,
                                 onValueChange = { testUrlInput = it },
                                 label = { Text("Sample URL (Editable)") },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .onFocusChanged { if (it.isFocused) keyboardController?.show() },
                                 shape = RoundedCornerShape(12.dp),
                                 maxLines = 3,
                                 textStyle = MaterialTheme.typography.bodyMedium.copy(
@@ -718,7 +723,9 @@ fun BuiltInRuleDetailScreen(
                                 value = testUrlInput,
                                 onValueChange = { testUrlInput = it },
                                 label = { Text("Sample URL") },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .onFocusChanged { if (it.isFocused) keyboardController?.show() },
                                 shape = RoundedCornerShape(12.dp),
                                 maxLines = 3,
                                 textStyle = MaterialTheme.typography.bodyMedium.copy(
@@ -818,7 +825,9 @@ fun BuiltInRuleDetailScreen(
                             onValueChange = { newParamInput = it },
                             placeholder = { Text("e.g. tracking_id") },
                             singleLine = true,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .onFocusChanged { if (it.isFocused) keyboardController?.show() },
                             shape = RoundedCornerShape(12.dp),
                             textStyle = MaterialTheme.typography.bodyMedium.copy(
                                 fontFamily = GoogleSansCode

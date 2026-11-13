@@ -65,8 +65,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -133,6 +135,7 @@ fun AddEditCustomRuleScreen(
 
     val isEditing = ruleToEdit != null
     val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val canSave = name.isNotBlank() && urlPattern.isNotBlank()
 
     val onSaveAction = {
@@ -335,7 +338,9 @@ fun AddEditCustomRuleScreen(
                 shape = RoundedCornerShape(16.dp),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { if (it.isFocused) keyboardController?.show() }
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -353,7 +358,9 @@ fun AddEditCustomRuleScreen(
                 shape = RoundedCornerShape(16.dp),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { if (it.isFocused) keyboardController?.show() }
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -370,7 +377,9 @@ fun AddEditCustomRuleScreen(
                 ),
                 shape = RoundedCornerShape(16.dp),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { if (it.isFocused) keyboardController?.show() }
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -398,7 +407,9 @@ fun AddEditCustomRuleScreen(
                 shape = RoundedCornerShape(16.dp),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { if (it.isFocused) keyboardController?.show() }
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -417,7 +428,9 @@ fun AddEditCustomRuleScreen(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { if (it.isFocused) keyboardController?.show() }
             )
 
             Spacer(modifier = Modifier.height(64.dp))
