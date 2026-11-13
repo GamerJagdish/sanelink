@@ -39,6 +39,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -55,6 +56,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -107,11 +109,14 @@ fun RulesScreen(
     val clearUrlsData by app.repository.clearUrlsData.collectAsState()
     val customRules by app.repository.customRules.collectAsState()
     val disabledProviderIds by app.repository.disabledProviderIds.collectAsState()
+    val bundledPatchedProviderIds by app.repository.bundledPatchedProviderIds.collectAsState()
+    val userPatchedProviderIds by app.repository.userPatchedProviderIds.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
 
     // Dialog / Bottom Sheet state for previewing built-in rule
     var previewProvider by remember { mutableStateOf<Pair<String, ProviderRule>?>(null) }
+    var editingPatchProvider by remember { mutableStateOf<Pair<String, ProviderRule>?>(null) }
 
     val motionScheme = LocalMotionScheme.current
     val itemPlacementSpec = remember(motionScheme) {
@@ -369,11 +374,15 @@ fun RulesScreen(
                                         contentType = { "built_in_provider" }
                                     ) { (name, rule) ->
                                         val isProviderActive = !disabledProviderIds.contains(name)
+                                        val isBundled = bundledPatchedProviderIds.contains(name)
+                                        val isUser = userPatchedProviderIds.contains(name)
 
                                         BuiltInProviderCard(
                                             name = name,
                                             rule = rule,
                                             isActive = isProviderActive,
+                                            isBundledPatched = isBundled,
+                                            isUserPatched = isUser,
                                             onToggle = { enable ->
                                                 scope.launch { app.repository.toggleProvider(name, enable) }
                                             },
@@ -528,12 +537,25 @@ fun RulesScreen(
     // Rule Details Preview Modal Bottom Sheet with Interactive Dummy URL Generator
     previewProvider?.let { (name, rule) ->
         val isProviderActive = !disabledProviderIds.contains(name)
+        val isBundled = bundledPatchedProviderIds.contains(name)
+        val isUser = userPatchedProviderIds.contains(name)
         RulePreviewBottomSheet(
             name = name,
             rule = rule,
             isActive = isProviderActive,
+            isBundledPatched = isBundled,
+            isUserPatched = isUser,
             onToggle = { enable ->
                 scope.launch { app.repository.toggleProvider(name, enable) }
+            },
+            onPatchClick = {
+                editingPatchProvider = name to rule
+                previewProvider = null
+            },
+            onResetPatch = {
+                scope.launch {
+                    app.repository.resetUserPatch(name)
+                }
             },
             onDismiss = { previewProvider = null }
         )
@@ -546,6 +568,8 @@ private fun BuiltInProviderCard(
     name: String,
     rule: ProviderRule,
     isActive: Boolean,
+    isBundledPatched: Boolean,
+    isUserPatched: Boolean,
     onToggle: (Boolean) -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -626,6 +650,38 @@ private fun BuiltInProviderCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
+                    if (isUserPatched) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.85f))
+                                .padding(horizontal = 7.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "User Patched",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        }
+                    } else if (isBundledPatched) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.85f))
+                                .padding(horizontal = 7.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "Patched",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+
                     val ruleCount = rule.rules.size + rule.referralMarketing.size
                     if (ruleCount > 0) {
                         Box(
@@ -927,12 +983,17 @@ private fun RulePreviewBottomSheet(
     name: String,
     rule: ProviderRule,
     isActive: Boolean,
+    isBundledPatched: Boolean,
+    isUserPatched: Boolean,
     onToggle: (Boolean) -> Unit,
+    onPatchClick: () -> Unit,
+    onResetPatch: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val app = SaneLinkApp.instance
     val motion = LocalMotionScheme.current
+    var showResetConfirm by remember { mutableStateOf(false) }
 
     // Interactive Dummy URL state
     val defaultDummy = remember(name, rule) { generateDummyUrl(name, rule) }
@@ -970,11 +1031,47 @@ private fun RulePreviewBottomSheet(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = formatProviderName(name),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = formatProviderName(name),
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (isUserPatched) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.85f))
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "User Patched",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                            }
+                        } else if (isBundledPatched) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.85f))
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "Patched",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                    }
                     Text(
                         text = "Rule Details & Live Simulation",
                         style = MaterialTheme.typography.bodySmall,
@@ -1294,7 +1391,89 @@ private fun RulePreviewBottomSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Patch Rule / Edit Patch Button (NO ICON - clean text as requested)
+            ElevatedButton(
+                onClick = onPatchClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.elevatedButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            ) {
+                Text(
+                    text = if (isUserPatched) "Edit Patch" else "Patch Rule",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            if (isUserPatched) {
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick = { showResetConfirm = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.45f))
+                ) {
+                    Text(
+                        text = "Reset to Default",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            if (showResetConfirm) {
+                AlertDialog(
+                    onDismissRequest = { showResetConfirm = false },
+                    title = {
+                        Text(
+                            text = "Reset Rule to Default?",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = "Are you sure you want to discard your custom patch for ${formatProviderName(name)}? This will restore the built-in tracking rules.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showResetConfirm = false
+                                onResetPatch()
+                            }
+                        ) {
+                            Text(
+                                text = "Reset",
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showResetConfirm = false }) {
+                            Text("Cancel")
+                        }
+                    },
+                    shape = RoundedCornerShape(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             ExpressiveFloatingButton(
                 text = "Close Preview",
