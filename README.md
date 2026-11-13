@@ -10,8 +10,9 @@ Built with Kotlin, Jetpack Compose, and Material 3 Expressive guidelines.
 
 - Strict Offline Privacy: SaneLink requires zero internet permissions (`android.permission.INTERNET` is explicitly removed from the manifest). All URL parsing and regular expression evaluation run strictly on your device. No telemetry, analytics, or external calls exist.
 - Automated Clipboard Sanitization: An optional background accessibility service detects when a URL is copied, cleans it against active rules, and updates the clipboard instantly with subtle haptic confirmation.
+- 2-Tier Patches System: Extends upstream ClearURLs definitions with official bundled patches (`rules/patches.json`) for rapidly evolving platforms (Threads, TikTok, Instagram, YouTube, etc.) and allows in-app interactive parameter patching per site with live URL previews.
+- Priority 1 Custom Rule Engine: User-defined custom rules execute with first-class priority—if a custom rule matches a URL, it applies and halts immediately. Includes smart duplicate suggestions when creating custom rules for sites with built-in rules.
 - Frontend Rewriting: Supports redirecting services to privacy-focused alternative frontends (for example, redirecting Reddit links to Redlib or X links to FixupX).
-- Custom Rule Engine: Add, edit, test, and toggle custom regular expression rules with live matching, domain replacements, and parameter strip lists.
 - Built-in Rule Database: Ships with more than 200 pre-configured rules covering major services and global tracking platforms.
 - Interactive Test Sandbox: Test URLs in real time to preview stripped tracking tokens, verify frontend rewrites, and copy clean links directly.
 - Native Share Target: Share links directly from any browser or application to clean and copy them in a single tap without switching apps.
@@ -31,42 +32,24 @@ We express our gratitude to Kevin Roebert and all contributors to ClearURLs for 
 
 ---
 
-## Rule Architecture and Contributing
+## Rule Architecture and Patches System
 
-All sanitization rules are stored in a standard JSON format located at `rules/rules.json`. Anyone can contribute new rules or update existing rules without needing an Android development environment.
+SaneLink uses a 3-tier hierarchical rule resolution pipeline:
 
-### Rule Structure
+1. **User Custom Rules (Priority 1 Halt)**: Custom rules created inside the app take absolute priority. If a custom rule matches the target URL, it is executed immediately and URL processing halts, completely bypassing built-in rules.
+2. **In-App User Patches (Layer 2)**: Users can tap on any built-in provider in the app, click **"Patch Rule"**, and selectively keep or strip individual parameters with a real-time live preview. Includes safety confirmation on reset.
+3. **SaneLink Bundled Patches (Layer 1 - `rules/patches.json`)**: An official, rapidly-updated override file shipped directly with the app to extend upstream ClearURLs definitions (e.g. adding Threads, Instagram `igsh`, TikTok `_r`/`_t`, YouTube `si`, etc.).
+4. **ClearURLs Upstream Baseline (`rules/rules.json`)**: The foundational baseline catalog covering 200+ providers.
 
-Each provider entry in `rules/rules.json` contains:
+### Contributing Patches
 
-```json
-{
-  "example.com": {
-    "urlPattern": "^https?:\\/\\/(?:[a-z0-9-]+\\.)?example\\.com(?:$|[/?#])",
-    "completeProvider": false,
-    "rules": [
-      "utm_source",
-      "utm_medium",
-      "utm_campaign",
-      "fbclid",
-      "ref_"
-    ],
-    "rawRules": [],
-    "referralMarketing": [],
-    "exceptions": [],
-    "redirections": [],
-    "forceRedirection": false
-  }
-}
-```
+You can contribute new tracker parameters or new site definitions without touching Android code:
 
-### Adding a New Rule
-
-1. Open `rules/rules.json`.
-2. Add your provider definition following the schema defined in `rules/rules.schema.json`.
+1. Open `rules/patches.json`.
+2. Add your provider patch (e.g. `addRules`, `removeRules`, or `urlPattern`).
 3. Submit a Pull Request on GitHub.
 
-For detailed guidelines and examples, refer to `CONTRIBUTING.md`.
+For comprehensive documentation on the patch schema, contribution guidelines, and examples, refer to [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
