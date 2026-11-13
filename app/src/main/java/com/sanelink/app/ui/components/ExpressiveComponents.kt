@@ -18,6 +18,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -32,9 +33,14 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -1369,21 +1375,23 @@ fun ExpressiveSegmentedListItem(
  * Auto-fitting title text using Google Sans Flex variable font.
  * Automatically detects when the title text overflows the available width (e.g. on high-DPI screens
  * or larger font scales) and dynamically scales down the font size and width axis so that the title
- * fits completely on a single line without being cut off.
+ * fits completely on a single line without being cut off. If the title is still too large, it
+ * smoothly auto-scrolls marquee-style so long titles never truncate.
  */
 @Composable
 fun AutoFitTitleText(
     text: String,
     modifier: Modifier = Modifier,
     targetFontSize: TextUnit = 24.sp,
-    minFontSize: TextUnit = 13.sp,
+    minFontSize: TextUnit = 14.sp,
     targetWeight: Int = 1000,
     targetWidth: Float = 151f,
     minWidth: Float = 60f,
     roundness: Float = 10f,
     letterSpacing: TextUnit = 0.5.sp,
     color: Color = Color.Unspecified,
-    textAlign: TextAlign = TextAlign.Center
+    textAlign: TextAlign = TextAlign.Center,
+    autoScroll: Boolean = true
 ) {
     BoxWithConstraints(
         modifier = modifier.fillMaxWidth(),
@@ -1397,11 +1405,13 @@ fun AutoFitTitleText(
         }
         val textMeasurer = rememberTextMeasurer()
 
+        val effectiveMinSp = if (autoScroll) 16.sp else minFontSize
+
         val (bestSize, bestWidth) = remember(
             text,
             maxWidthPx,
             targetFontSize,
-            minFontSize,
+            effectiveMinSp,
             targetWeight,
             targetWidth,
             minWidth,
@@ -1437,21 +1447,21 @@ fun AutoFitTitleText(
                 } else {
                     // Overflow detected! Scale font size proportionally with a safe buffer
                     val scaleFactor = (maxWidthPx.toFloat() / initialWidth.toFloat()) * 0.98f
-                    var candidateSp = (targetFontSize.value * scaleFactor).coerceAtLeast(minFontSize.value)
+                    var candidateSp = (targetFontSize.value * scaleFactor).coerceAtLeast(effectiveMinSp.value)
                     var candidateWidth = targetWidth
                     var currentWidth = measureText(candidateSp, candidateWidth)
 
                     // If minFontSize is reached and text still overflows, scale down the font's wdth axis
-                    if (currentWidth > maxWidthPx && candidateSp <= minFontSize.value) {
+                    if (currentWidth > maxWidthPx && candidateSp <= effectiveMinSp.value) {
                         val widthScale = (maxWidthPx.toFloat() / currentWidth.toFloat()) * 0.98f
                         candidateWidth = (targetWidth * widthScale).coerceIn(minWidth, targetWidth)
                         currentWidth = measureText(candidateSp, candidateWidth)
                     }
 
                     // Fine-tuning pass to guarantee text fits strictly within maxWidthPx
-                    while (currentWidth > maxWidthPx && (candidateSp > minFontSize.value || candidateWidth > minWidth)) {
-                        if (candidateSp > minFontSize.value) {
-                            candidateSp = (candidateSp - 0.5f).coerceAtLeast(minFontSize.value)
+                    while (currentWidth > maxWidthPx && (candidateSp > effectiveMinSp.value || candidateWidth > minWidth)) {
+                        if (candidateSp > effectiveMinSp.value) {
+                            candidateSp = (candidateSp - 0.5f).coerceAtLeast(effectiveMinSp.value)
                         } else {
                             candidateWidth = (candidateWidth - 5f).coerceAtLeast(minWidth)
                         }
@@ -1461,6 +1471,12 @@ fun AutoFitTitleText(
                     candidateSp.sp to candidateWidth
                 }
             }
+        }
+
+        val textModifier = if (autoScroll) {
+            Modifier.basicMarquee()
+        } else {
+            Modifier
         }
 
         Text(
@@ -1479,8 +1495,208 @@ fun AutoFitTitleText(
             ),
             maxLines = 1,
             softWrap = false,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = textAlign
+            overflow = if (autoScroll) TextOverflow.Clip else TextOverflow.Ellipsis,
+            textAlign = textAlign,
+            modifier = textModifier
         )
+    }
+}
+
+/**
+ * Material 3 Expressive Dual Action Connected Bottom Bar.
+ *
+ * Implements M3 Expressive Connected Button Group specifications:
+ * - 70% Primary / 30% Secondary width allocation with 12% touch neighbor compression physics
+ * - Tactile press scale feedback (squish & bounce with motionScheme.fastSpatial)
+ * - Dynamic M3 Shape Morphing: 6.dp inner corner morphs into full 24.dp pill shape on touch
+ * - Edge-to-edge navigation bar padding support
+ */
+@Composable
+fun ExpressiveDualActionButtonBar(
+    primaryText: String,
+    secondaryText: String,
+    onPrimaryClick: () -> Unit,
+    onSecondaryClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    primaryEnabled: Boolean = true,
+    secondaryEnabled: Boolean = true,
+    primaryContainerColor: Color = MaterialTheme.colorScheme.primary,
+    primaryContentColor: Color = MaterialTheme.colorScheme.onPrimary,
+    secondaryContainerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    secondaryContentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
+) {
+    val navBarBottom = WindowInsets.navigationBars
+        .exclude(WindowInsets.ime)
+        .asPaddingValues()
+        .calculateBottomPadding()
+
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = navBarBottom)
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+        ) {
+            val primaryInteractionSource = remember { MutableInteractionSource() }
+            val isPrimaryPressed by primaryInteractionSource.collectIsPressedAsState()
+
+            val secondaryInteractionSource = remember { MutableInteractionSource() }
+            val isSecondaryPressed by secondaryInteractionSource.collectIsPressedAsState()
+            val motionScheme = LocalMotionScheme.current
+
+            val primaryTargetWeight = when {
+                isPrimaryPressed && primaryEnabled -> 0.82f
+                isSecondaryPressed -> 0.58f
+                else -> 0.70f
+            }
+            val secondaryTargetWeight = when {
+                isSecondaryPressed -> 0.42f
+                isPrimaryPressed && primaryEnabled -> 0.18f
+                else -> 0.30f
+            }
+            val animatedPrimaryWeight by animateFloatAsState(
+                targetValue = primaryTargetWeight,
+                animationSpec = motionScheme.fastSpatial,
+                label = "dualBarPrimaryWeight"
+            )
+            val animatedSecondaryWeight by animateFloatAsState(
+                targetValue = secondaryTargetWeight,
+                animationSpec = motionScheme.fastSpatial,
+                label = "dualBarSecondaryWeight"
+            )
+
+            val primaryPressScale by animateFloatAsState(
+                targetValue = if (isPrimaryPressed && primaryEnabled) 0.96f else 1f,
+                animationSpec = motionScheme.fastSpatial,
+                label = "dualBarPrimaryScale"
+            )
+            val secondaryPressScale by animateFloatAsState(
+                targetValue = if (isSecondaryPressed && secondaryEnabled) 0.96f else 1f,
+                animationSpec = motionScheme.fastSpatial,
+                label = "dualBarSecondaryScale"
+            )
+
+            val primaryBgColor by animateColorAsState(
+                targetValue = if (primaryEnabled) {
+                    primaryContainerColor
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                },
+                animationSpec = motionScheme.defaultColorEffects,
+                label = "dualBarPrimaryBg"
+            )
+            val primaryTextColor by animateColorAsState(
+                targetValue = if (primaryEnabled) {
+                    primaryContentColor
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                },
+                animationSpec = motionScheme.fastColorEffects,
+                label = "dualBarPrimaryText"
+            )
+
+            val fullRadius = 24.dp
+            val innerRadius = 6.dp
+
+            val primaryEndRadius by animateDpAsState(
+                targetValue = if (isPrimaryPressed && primaryEnabled) fullRadius else innerRadius,
+                animationSpec = spring(
+                    dampingRatio = motionScheme.fastSpatial.dampingRatio,
+                    stiffness = motionScheme.fastSpatial.stiffness
+                ),
+                label = "dualBarPrimaryEndRadius"
+            )
+            val secondaryStartRadius by animateDpAsState(
+                targetValue = if (isSecondaryPressed && secondaryEnabled) fullRadius else innerRadius,
+                animationSpec = spring(
+                    dampingRatio = motionScheme.fastSpatial.dampingRatio,
+                    stiffness = motionScheme.fastSpatial.stiffness
+                ),
+                label = "dualBarSecondaryStartRadius"
+            )
+
+            val primaryShape = RoundedCornerShape(
+                topStart = fullRadius,
+                bottomStart = fullRadius,
+                topEnd = primaryEndRadius,
+                bottomEnd = primaryEndRadius
+            )
+            val secondaryShape = RoundedCornerShape(
+                topStart = secondaryStartRadius,
+                bottomStart = secondaryStartRadius,
+                topEnd = fullRadius,
+                bottomEnd = fullRadius
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Primary Action Button (70% weight)
+                Box(
+                    modifier = Modifier
+                        .weight(animatedPrimaryWeight)
+                        .height(48.dp)
+                        .graphicsLayer {
+                            scaleX = primaryPressScale
+                            scaleY = primaryPressScale
+                        }
+                        .clip(primaryShape)
+                        .background(primaryBgColor)
+                        .clickable(
+                            enabled = primaryEnabled,
+                            interactionSource = primaryInteractionSource,
+                            indication = ripple()
+                        ) {
+                            onPrimaryClick()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = primaryText,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = primaryTextColor,
+                        maxLines = 1
+                    )
+                }
+
+                // Secondary Action Button (30% weight)
+                Box(
+                    modifier = Modifier
+                        .weight(animatedSecondaryWeight)
+                        .height(48.dp)
+                        .graphicsLayer {
+                            scaleX = secondaryPressScale
+                            scaleY = secondaryPressScale
+                        }
+                        .clip(secondaryShape)
+                        .background(secondaryContainerColor)
+                        .clickable(
+                            enabled = secondaryEnabled,
+                            interactionSource = secondaryInteractionSource,
+                            indication = ripple()
+                        ) {
+                            onSecondaryClick()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = secondaryText,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = secondaryContentColor,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
     }
 }

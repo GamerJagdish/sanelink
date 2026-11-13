@@ -76,6 +76,7 @@ import com.sanelink.app.R
 import com.sanelink.app.SaneLinkApp
 import com.sanelink.app.core.model.CustomRule
 import com.sanelink.app.ui.components.AutoFitTitleText
+import com.sanelink.app.ui.components.ExpressiveDualActionButtonBar
 import com.sanelink.app.ui.theme.GoogleSansCode
 import com.sanelink.app.ui.theme.LocalMotionScheme
 
@@ -163,180 +164,13 @@ fun AddEditCustomRuleScreen(
             )
         },
         bottomBar = {
-            val navBarBottom = WindowInsets.navigationBars
-                .exclude(WindowInsets.ime)
-                .asPaddingValues()
-                .calculateBottomPadding()
-
-            Surface(
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 2.dp
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = navBarBottom)
-                        .padding(horizontal = 20.dp, vertical = 12.dp)
-                ) {
-                    val saveInteractionSource = remember { MutableInteractionSource() }
-                    val isSavePressed by saveInteractionSource.collectIsPressedAsState()
-
-                    val closeInteractionSource = remember { MutableInteractionSource() }
-                    val isClosePressed by closeInteractionSource.collectIsPressedAsState()
-                    val motionScheme = LocalMotionScheme.current
-
-                    // M3 Expressive Spring Width Physics (70% Save / 30% Close baseline with 12% neighbor compression on touch)
-                    val saveTargetWeight = when {
-                        isSavePressed && canSave -> 0.82f
-                        isClosePressed -> 0.58f
-                        else -> 0.70f
-                    }
-                    val closeTargetWeight = when {
-                        isClosePressed -> 0.42f
-                        isSavePressed && canSave -> 0.18f
-                        else -> 0.30f
-                    }
-                    val animatedSaveWeight by animateFloatAsState(
-                        targetValue = saveTargetWeight,
-                        animationSpec = motionScheme.fastSpatial,
-                        label = "saveWeight"
-                    )
-                    val animatedCloseWeight by animateFloatAsState(
-                        targetValue = closeTargetWeight,
-                        animationSpec = motionScheme.fastSpatial,
-                        label = "closeWeight"
-                    )
-
-                    // Tactile press scale feedback (squish & bounce)
-                    val savePressScale by animateFloatAsState(
-                        targetValue = if (isSavePressed && canSave) 0.96f else 1f,
-                        animationSpec = motionScheme.fastSpatial,
-                        label = "savePressScale"
-                    )
-                    val closePressScale by animateFloatAsState(
-                        targetValue = if (isClosePressed) 0.96f else 1f,
-                        animationSpec = motionScheme.fastSpatial,
-                        label = "closePressScale"
-                    )
-
-                    // Color transitions (Effects springs: critical damping, no overshoot)
-                    val saveBgColor by animateColorAsState(
-                        targetValue = if (canSave) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-                        },
-                        animationSpec = motionScheme.defaultColorEffects,
-                        label = "saveBgColor"
-                    )
-                    val saveContentColor by animateColorAsState(
-                        targetValue = if (canSave) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                        },
-                        animationSpec = motionScheme.fastColorEffects,
-                        label = "saveContentColor"
-                    )
-
-                    // Dynamic M3 Shape Morphing: transforms into standalone rounded pill on press / drag
-                    val fullRadius = 24.dp
-                    val innerRadius = 6.dp
-
-                    val saveEndRadius by animateDpAsState(
-                        targetValue = if (isSavePressed && canSave) fullRadius else innerRadius,
-                        animationSpec = spring(
-                            dampingRatio = motionScheme.fastSpatial.dampingRatio,
-                            stiffness = motionScheme.fastSpatial.stiffness
-                        ),
-                        label = "saveEndRadius"
-                    )
-                    val closeStartRadius by animateDpAsState(
-                        targetValue = if (isClosePressed) fullRadius else innerRadius,
-                        animationSpec = spring(
-                            dampingRatio = motionScheme.fastSpatial.dampingRatio,
-                            stiffness = motionScheme.fastSpatial.stiffness
-                        ),
-                        label = "closeStartRadius"
-                    )
-
-                    val saveShape = RoundedCornerShape(
-                        topStart = fullRadius,
-                        bottomStart = fullRadius,
-                        topEnd = saveEndRadius,
-                        bottomEnd = saveEndRadius
-                    )
-                    val closeShape = RoundedCornerShape(
-                        topStart = closeStartRadius,
-                        bottomStart = closeStartRadius,
-                        topEnd = fullRadius,
-                        bottomEnd = fullRadius
-                    )
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        horizontalArrangement = Arrangement.spacedBy(2.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Main Save / Update Button (70% width)
-                        Box(
-                            modifier = Modifier
-                                .weight(animatedSaveWeight)
-                                .height(48.dp)
-                                .graphicsLayer {
-                                    scaleX = savePressScale
-                                    scaleY = savePressScale
-                                }
-                                .clip(saveShape)
-                                .background(saveBgColor)
-                                .clickable(
-                                    enabled = canSave,
-                                    interactionSource = saveInteractionSource,
-                                    indication = ripple()
-                                ) {
-                                    onSaveAction()
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = if (isEditing) "Update Rule" else "Save Custom Rule",
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.titleSmall,
-                                color = saveContentColor
-                            )
-                        }
-
-                        // Close Button (30% width)
-                        Box(
-                            modifier = Modifier
-                                .weight(animatedCloseWeight)
-                                .height(48.dp)
-                                .graphicsLayer {
-                                    scaleX = closePressScale
-                                    scaleY = closePressScale
-                                }
-                                .clip(closeShape)
-                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                                .clickable(
-                                    interactionSource = closeInteractionSource,
-                                    indication = ripple()
-                                ) {
-                                    onBack()
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Close",
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
+            ExpressiveDualActionButtonBar(
+                primaryText = if (isEditing) "Update Rule" else "Save Custom Rule",
+                secondaryText = "Close",
+                primaryEnabled = canSave,
+                onPrimaryClick = onSaveAction,
+                onSecondaryClick = onBack
+            )
         }
     ) { innerPadding ->
         Column(
