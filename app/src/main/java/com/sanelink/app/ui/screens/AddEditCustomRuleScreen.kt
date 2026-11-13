@@ -415,10 +415,3 @@ fun AddEditCustomRuleScreen(
         }
     }
 }
-
-private fun formatProviderName(key: String): String {
-    return key.split("_", "-", " ")
-        .joinToString(" ") { word ->
-            word.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-        }
-}

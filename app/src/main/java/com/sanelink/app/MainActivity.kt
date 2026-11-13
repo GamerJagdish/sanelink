@@ -73,10 +73,12 @@ import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.blur.material3.Material3
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import com.sanelink.app.core.model.CustomRule
 import com.sanelink.app.ui.components.AutoFitTitleText
 import com.sanelink.app.ui.components.LocalHazeState
 import com.sanelink.app.ui.screens.AddEditCustomRuleScreen
+import com.sanelink.app.ui.screens.BuiltInRuleDetailScreen
 import com.sanelink.app.ui.screens.HomeScreen
 import com.sanelink.app.ui.screens.RulesScreen
 import com.sanelink.app.ui.screens.SettingsScreen
@@ -87,6 +89,12 @@ import com.sanelink.app.ui.theme.rememberReducedMotion
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+
+private enum class ActiveScreen {
+    MAIN,
+    CUSTOM_RULE,
+    BUILT_IN_DETAIL
+}
 
 class MainActivity : ComponentActivity() {
 
@@ -122,27 +130,38 @@ class MainActivity : ComponentActivity() {
         setContent {
             SaneLinkTheme {
                 val scope = rememberCoroutineScope()
-                var selectedTab by remember { mutableIntStateOf(0) }
+                var selectedTab by rememberSaveable { mutableIntStateOf(0) }
                 var rulesSubTab by rememberSaveable { mutableIntStateOf(0) } // 0: Built-in, 1: Custom
 
-                // Full-screen page navigation state for Add/Edit Custom Rule
-                var isAddingCustomRule by remember { mutableStateOf(false) }
+                // Hoist lazy list states so scrolling in RulesScreen is strictly preserved across screen navigations
+                val builtInListState = rememberLazyListState()
+                val customListState = rememberLazyListState()
+
+                // Full-screen page navigation states
+                var isAddingCustomRule by rememberSaveable { mutableStateOf(false) }
                 var editingCustomRule by remember { mutableStateOf<CustomRule?>(null) }
-                var directPatchProviderId by remember { mutableStateOf<String?>(null) }
-                val isEditingRule = isAddingCustomRule || editingCustomRule != null
+                var viewingBuiltInProviderId by rememberSaveable { mutableStateOf<String?>(null) }
+                var builtInStartPatchMode by rememberSaveable { mutableStateOf(false) }
+
+                val activeScreen = when {
+                    isAddingCustomRule || editingCustomRule != null -> ActiveScreen.CUSTOM_RULE
+                    viewingBuiltInProviderId != null -> ActiveScreen.BUILT_IN_DETAIL
+                    else -> ActiveScreen.MAIN
+                }
 
                 val motionScheme = LocalMotionScheme.current
                 val isReducedMotion = rememberReducedMotion()
 
                 // Material 3 Expressive forward/backward shared axis container transition
                 AnimatedContent(
-                    targetState = isEditingRule,
+                    targetState = activeScreen,
                     transitionSpec = {
+                        val isNavigatingBack = targetState == ActiveScreen.MAIN
                         if (isReducedMotion) {
                             fadeIn(animationSpec = motionScheme.fastEffects)
                                 .togetherWith(fadeOut(animationSpec = motionScheme.fastEffects))
-                        } else if (targetState) {
-                            // Forward hierarchical navigation into Custom Rule editor (M3 Shared Axis scale + slide)
+                        } else if (!isNavigatingBack) {
+                            // Forward hierarchical navigation into sub-screen (M3 Shared Axis scale + slide)
                             (slideInHorizontally(
                                 animationSpec = spring(
                                     dampingRatio = motionScheme.defaultSpatial.dampingRatio,
@@ -209,38 +228,60 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     },
-                    label = "ruleEditorTransition"
-                ) { editing ->
-                    if (editing) {
-                        BackHandler {
-                            isAddingCustomRule = false
-                            editingCustomRule = null
-                        }
-
-                        AddEditCustomRuleScreen(
-                            ruleToEdit = editingCustomRule,
-                            onBack = {
-                                isAddingCustomRule = false
-                                editingCustomRule = null
-                            },
-                            onSave = { rule ->
-                                scope.launch {
-                                    SaneLinkApp.instance.repository.saveCustomRule(rule)
-                                    rulesSubTab = 1 // Immediately return to the Custom tab to see the saved/updated rule
-                                    isAddingCustomRule = false
-                                    editingCustomRule = null
-                                }
-                            },
-                            onPatchBuiltIn = { providerId ->
-                                directPatchProviderId = providerId
-                                rulesSubTab = 0
-                                selectedTab = 1
+                    label = "screenTransition"
+                ) { currentScreen ->
+                    when (currentScreen) {
+                        ActiveScreen.CUSTOM_RULE -> {
+                            BackHandler {
                                 isAddingCustomRule = false
                                 editingCustomRule = null
                             }
-                        )
-                    } else {
-                        Scaffold(
+
+                            AddEditCustomRuleScreen(
+                                ruleToEdit = editingCustomRule,
+                                onBack = {
+                                    isAddingCustomRule = false
+                                    editingCustomRule = null
+                                },
+                                onSave = { rule ->
+                                    scope.launch {
+                                        SaneLinkApp.instance.repository.saveCustomRule(rule)
+                                        rulesSubTab = 1 // Immediately return to the Custom tab to see the saved/updated rule
+                                        isAddingCustomRule = false
+                                        editingCustomRule = null
+                                    }
+                                },
+                                onPatchBuiltIn = { providerId ->
+                                    isAddingCustomRule = false
+                                    editingCustomRule = null
+                                    viewingBuiltInProviderId = providerId
+                                    builtInStartPatchMode = true
+                                }
+                            )
+                        }
+                        ActiveScreen.BUILT_IN_DETAIL -> {
+                            val currentProviderId = viewingBuiltInProviderId ?: ""
+                            BuiltInRuleDetailScreen(
+                                providerId = currentProviderId,
+                                initialPatchMode = builtInStartPatchMode,
+                                onClose = {
+                                    viewingBuiltInProviderId = null
+                                    builtInStartPatchMode = false
+                                },
+                                onSavePatch = { patch ->
+                                    scope.launch {
+                                        SaneLinkApp.instance.repository.saveUserPatch(patch)
+                                    }
+                                },
+                                onResetPatch = {
+                                    scope.launch {
+                                        SaneLinkApp.instance.repository.resetUserPatch(currentProviderId)
+                                    }
+                                }
+                            )
+                        }
+                        ActiveScreen.MAIN -> {
+                            Scaffold(
                             modifier = Modifier.fillMaxSize(),
                             contentWindowInsets = WindowInsets(0, 0, 0, 0),
                             topBar = {
@@ -353,8 +394,12 @@ class MainActivity : ComponentActivity() {
                                                     onSubTabChanged = { rulesSubTab = it },
                                                     onAddCustomRule = { isAddingCustomRule = true },
                                                     onEditCustomRule = { rule -> editingCustomRule = rule },
-                                                    directPatchProviderId = directPatchProviderId,
-                                                    onDirectPatchHandled = { directPatchProviderId = null }
+                                                    onSelectBuiltInRule = { providerId ->
+                                                        viewingBuiltInProviderId = providerId
+                                                        builtInStartPatchMode = false
+                                                    },
+                                                    builtInListState = builtInListState,
+                                                    customListState = customListState
                                                 )
                                                 2 -> SettingsScreen()
                                             }
@@ -435,6 +480,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 }
+    }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
