@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "description": "SaneLink official overrides and extensions on top of ClearURLs",
+  "providers": {
+    "instagram": {
+      "addRules": [
+        "igsh",
+        "ig_mid",
+        "ig_rid",
+        "utm_source",
+        "utm_medium",
+        "utm_campaign"
+      ]
+    },
+    "threads": {
+      "urlPattern": "^https?:\\/\\/(?:www\\.)?threads\\.net",
+      "completeProvider": false,
+      "addRules": [
+        "xmt",
+        "sjid",
+        "igsh",
+        "utm_source",
+        "utm_medium",
+        "utm_campaign"
+      ]
+    },
+    "tiktok": {
+      "addRules": [
+        "_r",
+        "_t",
+        "checksum",
+        "sec_user_id"
+      ]
+    },
+    "youtube": {
+      "addRules": [
+        "si",
+        "pp",
+        "feature"
+      ]
+    },
+    "amazon": {
+      "addRules": [
+        "dib",
+        "dib_tag",
+        "social_share"
+      ]
+    },
+    "twitter": {
+      "addRules": [
+        "s",
+        "t",
+        "ref_src",
+        "ref_url"
+      ]
+    }
+  }
+}

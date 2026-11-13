@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.sanelink.app.core.model.CustomRule
 import com.sanelink.app.core.model.SanitizationStats
+import com.sanelink.app.core.model.UserPatch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
@@ -28,6 +29,7 @@ class AppPreferences(private val context: Context) {
         val KEY_SHOW_TOAST = booleanPreferencesKey("show_toast_enabled")
         val KEY_DISABLED_PROVIDERS = stringSetPreferencesKey("disabled_provider_ids")
         val KEY_CUSTOM_RULES = stringPreferencesKey("custom_rules_json")
+        val KEY_USER_PATCHES = stringPreferencesKey("user_patches_json")
         val KEY_TOTAL_CLEANED = longPreferencesKey("total_links_cleaned")
         val KEY_TOTAL_TRACKERS = longPreferencesKey("total_trackers_removed")
 
@@ -60,6 +62,19 @@ class AppPreferences(private val context: Context) {
                 json.decodeFromString<List<CustomRule>>(rawJson)
             } catch (_: Exception) {
                 DEFAULT_CUSTOM_RULES
+            }
+        }
+    }
+
+    val userPatches: Flow<Map<String, UserPatch>> = context.dataStore.data.map { prefs ->
+        val rawJson = prefs[KEY_USER_PATCHES]
+        if (rawJson.isNullOrBlank()) {
+            emptyMap()
+        } else {
+            try {
+                json.decodeFromString<Map<String, UserPatch>>(rawJson)
+            } catch (_: Exception) {
+                emptyMap()
             }
         }
     }
@@ -173,6 +188,40 @@ class AppPreferences(private val context: Context) {
             val currentTrackers = prefs[KEY_TOTAL_TRACKERS] ?: 0L
             prefs[KEY_TOTAL_CLEANED] = currentCleaned + 1
             prefs[KEY_TOTAL_TRACKERS] = currentTrackers + trackersRemovedCount
+        }
+    }
+
+    suspend fun saveUserPatch(patch: UserPatch) {
+        context.dataStore.edit { prefs ->
+            val rawJson = prefs[KEY_USER_PATCHES]
+            val currentMap = if (rawJson.isNullOrBlank()) {
+                mutableMapOf()
+            } else {
+                try {
+                    json.decodeFromString<Map<String, UserPatch>>(rawJson).toMutableMap()
+                } catch (_: Exception) {
+                    mutableMapOf()
+                }
+            }
+            currentMap[patch.providerId] = patch
+            prefs[KEY_USER_PATCHES] = json.encodeToString(currentMap)
+        }
+    }
+
+    suspend fun deleteUserPatch(providerId: String) {
+        context.dataStore.edit { prefs ->
+            val rawJson = prefs[KEY_USER_PATCHES]
+            val currentMap = if (rawJson.isNullOrBlank()) {
+                mutableMapOf()
+            } else {
+                try {
+                    json.decodeFromString<Map<String, UserPatch>>(rawJson).toMutableMap()
+                } catch (_: Exception) {
+                    mutableMapOf()
+                }
+            }
+            currentMap.remove(providerId)
+            prefs[KEY_USER_PATCHES] = json.encodeToString(currentMap)
         }
     }
 }
