@@ -106,12 +106,21 @@ fun AddEditCustomRuleScreen(
         val cleanName = name.trim().lowercase()
 
         val matched = clearUrlsData.providers.entries.firstOrNull { (providerId, providerRule) ->
+            // Do not suggest catch-all global rules (e.g. globalRules) as duplicates for specific custom rules
+            if (providerId.equals("globalRules", ignoreCase = true) || providerRule.urlPattern == ".*") {
+                return@firstOrNull false
+            }
+
             val pId = providerId.lowercase()
-            (cleanName.isNotBlank() && (cleanName == pId || cleanName.contains(pId))) ||
+            (cleanName.isNotBlank() && (cleanName == pId || (pId.length >= 3 && cleanName.contains(pId)))) ||
             (cleanPattern.isNotBlank() && (
                 cleanPattern.contains(pId) ||
                 cleanPattern.contains("$pId.") ||
-                try { Regex(providerRule.urlPattern, RegexOption.IGNORE_CASE).containsMatchIn(urlPattern) } catch (_: Exception) { false }
+                try {
+                    providerRule.urlPattern.isNotBlank() &&
+                        providerRule.urlPattern != ".*" &&
+                        Regex(providerRule.urlPattern, RegexOption.IGNORE_CASE).containsMatchIn(urlPattern)
+                } catch (_: Exception) { false }
             ))
         }
 
