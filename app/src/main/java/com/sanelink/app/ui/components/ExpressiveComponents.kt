@@ -31,11 +31,13 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.exclude
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -330,7 +332,9 @@ fun ExpressiveStatsRow(
     modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         StatCard(
@@ -373,6 +377,7 @@ private fun StatCard(
 
     Card(
         modifier = modifier
+            .fillMaxHeight()
             .graphicsLayer {
                 scaleX = pressScale
                 scaleY = pressScale
@@ -390,14 +395,20 @@ private fun StatCard(
         onClick = {}
     ) {
         Column(
-            modifier = Modifier.padding(18.dp)
+            modifier = Modifier
+                .padding(18.dp)
+                .fillMaxHeight(),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                maxLines = 2,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
             )
-            Spacer(modifier = Modifier.height(10.dp))
             AnimatedContent(
                 targetState = value,
                 transitionSpec = {
@@ -428,6 +439,7 @@ private fun StatCard(
                         fontWeight = FontWeight(900),
                         letterSpacing = (-0.5).sp
                     ),
+                    maxLines = 1,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
