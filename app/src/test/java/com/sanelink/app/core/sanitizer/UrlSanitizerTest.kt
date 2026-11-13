@@ -124,4 +124,29 @@ class UrlSanitizerTest {
         assertFalse(result.wasModified)
         assertEquals(input, result.cleanText)
     }
+
+    @Test
+    fun testCustomRulePriorityHaltsBuiltInProviders() {
+        // Amazon built-in rule strips 'tag', 'keywords', 'qid', etc.
+        // But if user defines an exclusive CustomRule for amazon that ONLY strips 'my_custom_param',
+        // priority 1 should apply ONLY the custom rule and halt, ignoring built-in 'tag'.
+        val customAmazonRule = CustomRule(
+            id = "custom_amazon",
+            name = "Custom Amazon Override",
+            urlPattern = "^https?://(?:www\\.)?amazon\\.com",
+            stripParameters = listOf("custom_tracker"),
+            isEnabled = true
+        )
+        val testSanitizer = UrlSanitizer(
+            clearUrlsData = ClearUrlsData(),
+            customRules = listOf(customAmazonRule)
+        )
+        // With custom rule, custom_tracker is stripped, and built-in rules are bypassed
+        val input = "https://www.amazon.com/dp/B08N5WRWNW?custom_tracker=bad&tag=keep_my_creator_affiliate"
+        val result = testSanitizer.sanitizeSingleUrl(input)
+
+        assertTrue(result.wasModified)
+        assertTrue(result.removedParameters.contains("custom_tracker"))
+        assertTrue(result.cleanText.contains("tag=keep_my_creator_affiliate"))
+    }
 }

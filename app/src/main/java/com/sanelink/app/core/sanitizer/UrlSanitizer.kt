@@ -143,9 +143,11 @@ class UrlSanitizer(
             }
         }
 
-        // 2. Apply Custom Rules (Stripping + Frontend Rewriting, e.g. Reddit -> Redlib)
+        // 2. Apply Custom Rules (Priority 1: if custom rule matches, only apply that and stop)
+        var customMatched = false
         for ((custom, regex) in compiledCustomPatterns) {
             if (regex.containsMatchIn(currentUrl)) {
+                customMatched = true
                 matchedSites.add(custom.name)
 
                 // Query stripping from custom rule
@@ -172,6 +174,18 @@ class UrlSanitizer(
                     } catch (_: Exception) {}
                 }
             }
+        }
+
+        // If a priority 1 custom rule matched, stop here and do not evaluate built-in providers
+        if (customMatched) {
+            return SanitizerResult(
+                originalText = rawUrl,
+                cleanText = currentUrl,
+                removedParameters = removedParams.distinct(),
+                wasModified = wasModified,
+                matchedSites = matchedSites.distinct(),
+                unwrappedUrl = unwrappedTarget
+            )
         }
 
         // 3. Apply ClearURLs Matching Providers
