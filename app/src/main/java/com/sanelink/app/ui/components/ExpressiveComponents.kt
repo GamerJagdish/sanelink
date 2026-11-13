@@ -834,7 +834,7 @@ fun ExpressiveConnectedButtonGroup(
                     ) {
                         onSelect(index)
                     }
-                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                    .padding(horizontal = 4.dp, vertical = 10.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Row(
@@ -854,6 +854,8 @@ fun ExpressiveConnectedButtonGroup(
                         text = item.label,
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                        maxLines = 1,
+                        softWrap = false,
                         color = contentColor
                     )
                     if (item.count != null) {
@@ -887,6 +889,8 @@ fun ExpressiveConnectedButtonGroup(
                                 text = "${item.count}",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                softWrap = false,
                                 color = contentColor
                             )
                         }
