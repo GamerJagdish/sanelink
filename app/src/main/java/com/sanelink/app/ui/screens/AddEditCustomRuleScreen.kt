@@ -1,10 +1,16 @@
 package com.sanelink.app.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -27,15 +33,23 @@ import androidx.compose.foundation.layout.imeNestedScroll
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -43,6 +57,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,10 +67,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sanelink.app.R
+import com.sanelink.app.SaneLinkApp
 import com.sanelink.app.core.model.CustomRule
 import com.sanelink.app.ui.components.AutoFitTitleText
 import com.sanelink.app.ui.theme.GoogleSansCode
@@ -66,7 +84,8 @@ import com.sanelink.app.ui.theme.LocalMotionScheme
 fun AddEditCustomRuleScreen(
     ruleToEdit: CustomRule?,
     onBack: () -> Unit,
-    onSave: (CustomRule) -> Unit
+    onSave: (CustomRule) -> Unit,
+    onPatchBuiltIn: (String) -> Unit = {}
 ) {
     var name by remember(ruleToEdit) { mutableStateOf(ruleToEdit?.name ?: "") }
     var urlPattern by remember(ruleToEdit) { mutableStateOf(ruleToEdit?.urlPattern ?: "") }
@@ -75,6 +94,32 @@ fun AddEditCustomRuleScreen(
     }
     var rewritePattern by remember(ruleToEdit) { mutableStateOf(ruleToEdit?.rewritePattern ?: "") }
     var rewriteReplacement by remember(ruleToEdit) { mutableStateOf(ruleToEdit?.rewriteReplacement ?: "") }
+
+    val clearUrlsData by SaneLinkApp.instance.repository.clearUrlsData.collectAsState()
+    var dismissedConflictProvider by remember { mutableStateOf<String?>(null) }
+
+    val matchingProvider = remember(name, urlPattern, clearUrlsData, dismissedConflictProvider) {
+        if (urlPattern.isBlank() && name.isBlank()) return@remember null
+
+        val cleanPattern = urlPattern.trim().lowercase()
+        val cleanName = name.trim().lowercase()
+
+        val matched = clearUrlsData.providers.entries.firstOrNull { (providerId, providerRule) ->
+            val pId = providerId.lowercase()
+            (cleanName.isNotBlank() && (cleanName == pId || cleanName.contains(pId))) ||
+            (cleanPattern.isNotBlank() && (
+                cleanPattern.contains(pId) ||
+                cleanPattern.contains("$pId.") ||
+                try { Regex(providerRule.urlPattern, RegexOption.IGNORE_CASE).containsMatchIn(urlPattern) } catch (_: Exception) { false }
+            ))
+        }
+
+        if (matched != null && matched.key != dismissedConflictProvider) {
+            matched.key
+        } else {
+            null
+        }
+    }
 
     val isEditing = ruleToEdit != null
     val focusManager = LocalFocusManager.current
@@ -352,6 +397,92 @@ fun AddEditCustomRuleScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
+            // Smart built-in duplicate suggestion banner
+            AnimatedVisibility(
+                visible = matchingProvider != null,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                matchingProvider?.let { matchedId ->
+                    Card(
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.35f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_info),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Built-in rule for ${formatProviderName(matchedId)} exists",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Text(
+                                text = "SaneLink already has built-in tracking rules for this site. You can patch the built-in rule instead, or keep this custom rule (Custom rules are evaluated first with Priority 1).",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.9f),
+                                lineHeight = 18.sp
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                ElevatedButton(
+                                    onClick = { onPatchBuiltIn(matchedId) },
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.elevatedButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.tertiary,
+                                        contentColor = MaterialTheme.colorScheme.onTertiary
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        text = "Patch Built-in Rule",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                OutlinedButton(
+                                    onClick = { dismissedConflictProvider = matchedId },
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                                    ),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.45f)),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        text = "Keep Independent",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Rule Name
             OutlinedTextField(
                 value = name,
@@ -449,4 +580,11 @@ fun AddEditCustomRuleScreen(
             Spacer(modifier = Modifier.height(64.dp))
         }
     }
+}
+
+private fun formatProviderName(key: String): String {
+    return key.split("_", "-", " ")
+        .joinToString(" ") { word ->
+            word.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+        }
 }

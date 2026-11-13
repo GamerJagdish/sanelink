@@ -59,6 +59,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -102,6 +103,8 @@ fun RulesScreen(
     onSubTabChanged: (Int) -> Unit = {},
     onAddCustomRule: () -> Unit = {},
     onEditCustomRule: (CustomRule) -> Unit = {},
+    directPatchProviderId: String? = null,
+    onDirectPatchHandled: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val app = SaneLinkApp.instance
@@ -120,6 +123,14 @@ fun RulesScreen(
     // Dialog / Bottom Sheet state for previewing built-in rule
     var previewProvider by remember { mutableStateOf<Pair<String, ProviderRule>?>(null) }
     var editingPatchProvider by remember { mutableStateOf<Pair<String, ProviderRule>?>(null) }
+
+    LaunchedEffect(directPatchProviderId, clearUrlsData) {
+        if (directPatchProviderId != null && clearUrlsData.providers.containsKey(directPatchProviderId)) {
+            val rule = clearUrlsData.providers[directPatchProviderId]!!
+            editingPatchProvider = directPatchProviderId to rule
+            onDirectPatchHandled()
+        }
+    }
 
     val motionScheme = LocalMotionScheme.current
     val itemPlacementSpec = remember(motionScheme) {

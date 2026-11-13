@@ -128,6 +128,7 @@ class MainActivity : ComponentActivity() {
                 // Full-screen page navigation state for Add/Edit Custom Rule
                 var isAddingCustomRule by remember { mutableStateOf(false) }
                 var editingCustomRule by remember { mutableStateOf<CustomRule?>(null) }
+                var directPatchProviderId by remember { mutableStateOf<String?>(null) }
                 val isEditingRule = isAddingCustomRule || editingCustomRule != null
 
                 val motionScheme = LocalMotionScheme.current
@@ -229,6 +230,13 @@ class MainActivity : ComponentActivity() {
                                     isAddingCustomRule = false
                                     editingCustomRule = null
                                 }
+                            },
+                            onPatchBuiltIn = { providerId ->
+                                directPatchProviderId = providerId
+                                rulesSubTab = 0
+                                selectedTab = 1
+                                isAddingCustomRule = false
+                                editingCustomRule = null
                             }
                         )
                     } else {
@@ -344,7 +352,9 @@ class MainActivity : ComponentActivity() {
                                                     selectedSubTab = rulesSubTab,
                                                     onSubTabChanged = { rulesSubTab = it },
                                                     onAddCustomRule = { isAddingCustomRule = true },
-                                                    onEditCustomRule = { rule -> editingCustomRule = rule }
+                                                    onEditCustomRule = { rule -> editingCustomRule = rule },
+                                                    directPatchProviderId = directPatchProviderId,
+                                                    onDirectPatchHandled = { directPatchProviderId = null }
                                                 )
                                                 2 -> SettingsScreen()
                                             }
