@@ -49,6 +49,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -88,6 +89,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -929,9 +931,31 @@ fun ExpressiveSearchBar(
     placeholder: String = "Search rules...",
     onClear: () -> Unit = { onQueryChange("") }
 ) {
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    var textFieldValue by remember(query) {
+        mutableStateOf(TextFieldValue(text = query, selection = TextRange(query.length)))
+    }
+
+    LaunchedEffect(query) {
+        if (query != textFieldValue.text) {
+            textFieldValue = textFieldValue.copy(
+                text = query,
+                selection = TextRange(query.length)
+            )
+        }
+    }
+
     TextField(
-        value = query,
-        onValueChange = onQueryChange,
+        value = textFieldValue,
+        onValueChange = { newValue ->
+            textFieldValue = newValue
+            if (newValue.text != query) {
+                onQueryChange(newValue.text)
+            }
+            keyboardController?.show()
+        },
         placeholder = {
             Text(
                 text = placeholder,
@@ -965,6 +989,12 @@ fun ExpressiveSearchBar(
         },
         singleLine = true,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(
+            onSearch = {
+                keyboardController?.hide()
+                focusManager.clearFocus()
+            }
+        ),
         shape = RoundedCornerShape(28.dp),
         textStyle = MaterialTheme.typography.bodyLarge.copy(
             color = MaterialTheme.colorScheme.onSurface
@@ -981,6 +1011,17 @@ fun ExpressiveSearchBar(
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp)
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    keyboardController?.show()
+                }
+            }
+            .onFocusChanged { focusState ->
+                if (focusState.isFocused) {
+                    keyboardController?.show()
+                }
+            }
     )
 }
 
