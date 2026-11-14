@@ -5,11 +5,17 @@
     "instagram": {
       "addRules": [
         "igsh",
-        "ig_mid",
-        "ig_rid",
+        "igsi",
         "utm_source",
         "utm_medium",
-        "utm_campaign"
+        "utm_content",
+        "fbclid",
+        "stkn",
+        "mdxt",
+        "cplk",
+        "obrf",
+        "vrfl",
+        "rpxt"
       ]
     },
     "threads": {
@@ -25,34 +31,16 @@
       ]
     },
     "tiktok": {
-      "addRules": [
-        "_r",
-        "_t",
-        "checksum",
-        "sec_user_id"
-      ]
+      "addRules": ["_r", "_t", "checksum", "sec_user_id"]
     },
     "youtube": {
-      "addRules": [
-        "si",
-        "pp",
-        "feature"
-      ]
+      "addRules": ["si", "pp", "feature"]
     },
     "amazon": {
-      "addRules": [
-        "dib",
-        "dib_tag",
-        "social_share"
-      ]
+      "addRules": ["dib", "dib_tag", "social_share"]
     },
     "twitter": {
-      "addRules": [
-        "s",
-        "t",
-        "ref_src",
-        "ref_url"
-      ]
+      "addRules": ["s", "t", "ref_src", "ref_url", "a"]
     }
   }
 }
