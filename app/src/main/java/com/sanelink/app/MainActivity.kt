@@ -29,6 +29,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -49,6 +50,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -62,6 +64,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -341,6 +348,89 @@ class MainActivity : ComponentActivity() {
                             }
                         ) { innerPadding ->
                             val hazeState = rememberHazeState()
+                            val density = LocalDensity.current
+                            val focusManager = LocalFocusManager.current
+                            val keyboardController = LocalSoftwareKeyboardController.current
+                            val isHapticEnabled by SaneLinkApp.instance.preferences.hapticFeedbackEnabled.collectAsState(initial = true)
+
+                            val triggerAppHaptic = {
+                                if (isHapticEnabled) {
+                                    triggerHaptic()
+                                }
+                            }
+
+                            val onSwipeForward = {
+                                when {
+                                    selectedTab == 0 -> {
+                                        selectedTab = 1
+                                        rulesSubTab = 0
+                                        triggerAppHaptic()
+                                    }
+                                    selectedTab == 1 && rulesSubTab == 0 -> {
+                                        rulesSubTab = 1
+                                        triggerAppHaptic()
+                                    }
+                                    selectedTab == 1 && rulesSubTab == 1 -> {
+                                        selectedTab = 2
+                                        triggerAppHaptic()
+                                    }
+                                }
+                            }
+
+                            val onSwipeBackward = {
+                                when {
+                                    selectedTab == 2 -> {
+                                        selectedTab = 1
+                                        rulesSubTab = 1
+                                        triggerAppHaptic()
+                                    }
+                                    selectedTab == 1 && rulesSubTab == 1 -> {
+                                        rulesSubTab = 0
+                                        triggerAppHaptic()
+                                    }
+                                    selectedTab == 1 && rulesSubTab == 0 -> {
+                                        selectedTab = 0
+                                        triggerAppHaptic()
+                                    }
+                                }
+                            }
+
+                            val swipeModifier = Modifier.pointerInput(selectedTab, rulesSubTab) {
+                                var totalDragX = 0f
+                                val velocityTracker = VelocityTracker()
+                                val dragThreshold = with(density) { 48.dp.toPx() }
+                                val minFlingVelocity = with(density) { 350.dp.toPx() }
+
+                                detectHorizontalDragGestures(
+                                    onDragStart = {
+                                        totalDragX = 0f
+                                        velocityTracker.resetTracking()
+                                    },
+                                    onDragEnd = {
+                                        val velocityX = velocityTracker.calculateVelocity().x
+                                        val isSwipeForward = velocityX < -minFlingVelocity || (totalDragX < -dragThreshold && velocityX < 100f)
+                                        val isSwipeBackward = velocityX > minFlingVelocity || (totalDragX > dragThreshold && velocityX > -100f)
+
+                                        if (isSwipeForward) {
+                                            focusManager.clearFocus()
+                                            keyboardController?.hide()
+                                            onSwipeForward()
+                                        } else if (isSwipeBackward) {
+                                            focusManager.clearFocus()
+                                            keyboardController?.hide()
+                                            onSwipeBackward()
+                                        }
+                                        totalDragX = 0f
+                                    },
+                                    onDragCancel = {
+                                        totalDragX = 0f
+                                    },
+                                    onHorizontalDrag = { change, dragAmount ->
+                                        totalDragX += dragAmount
+                                        velocityTracker.addPosition(change.uptimeMillis, change.position)
+                                    }
+                                )
+                            }
 
                             CompositionLocalProvider(LocalHazeState provides hazeState) {
                                 Box(modifier = Modifier.fillMaxSize()) {
@@ -349,6 +439,7 @@ class MainActivity : ComponentActivity() {
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .padding(top = innerPadding.calculateTopPadding())
+                                            .then(swipeModifier)
                                     ) {
                                         AnimatedContent(
                                             targetState = selectedTab,
