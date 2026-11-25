@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    SaneLink only listens for signs of a copy (clicks on "Copy" buttons, "Copied" toasts and
+    announcements, the system clipboard overlay). It never reads screen content beyond the
+    label of the clicked control, and nothing leaves the device.
+-->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/accessibility_service_description"
-    android:accessibilityEventTypes="typeWindowStateChanged|typeViewClicked|typeViewFocused|typeViewLongClicked"
+    android:summary="@string/accessibility_service_summary"
+    android:accessibilityEventTypes="typeViewClicked|typeViewLongClicked|typeNotificationStateChanged|typeWindowStateChanged|typeAnnouncement"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:notificationTimeout="100"
+    android:notificationTimeout="50"
     android:canRetrieveWindowContent="true"
-    android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows" />
+    android:accessibilityFlags="flagDefault" />

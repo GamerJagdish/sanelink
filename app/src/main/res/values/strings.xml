@@ -3,5 +3,6 @@
     <string name="share_clean_action">Sanitize &amp; Copy</string>
     <string name="tile_label">Clean Clipboard</string>
     <string name="process_text_clean">Clean Link</string>
-    <string name="accessibility_service_description">Monitors window transitions to detect and sanitize tracking links offline.</string>
+    <string name="accessibility_service_description">SaneLink watches for copy actions (\"Copy link\" buttons, \"Copied\" messages) so it can strip tracking parameters from links you copy, before you paste them. It does not read or collect anything else, and everything stays on your device.</string>
+    <string name="accessibility_service_summary">Automatically cleans tracking links when you copy them</string>
 </resources>
