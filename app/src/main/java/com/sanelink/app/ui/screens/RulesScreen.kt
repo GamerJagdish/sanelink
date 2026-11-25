@@ -875,7 +875,8 @@ private fun CustomRuleCard(
                         color = titleColor
                     )
                     Text(
-                        text = rule.urlPattern,
+                        // Simple-mode rules show their plain website instead of the generated regex
+                        text = rule.matchDomain ?: rule.urlPattern,
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontFamily = GoogleSansCode,
                             fontWeight = FontWeight.Medium,
@@ -885,7 +886,13 @@ private fun CustomRuleCard(
                     )
 
                     // Frontend Rewrite preview
-                    if (!rule.rewritePattern.isNullOrBlank() && !rule.rewriteReplacement.isNullOrBlank()) {
+                    val rewriteLabel = when {
+                        !rule.swapToDomain.isNullOrBlank() -> "Opens on: ${rule.swapToDomain}"
+                        !rule.rewritePattern.isNullOrBlank() && !rule.rewriteReplacement.isNullOrBlank() ->
+                            "Rewrites to: ${rule.rewriteReplacement}"
+                        else -> null
+                    }
+                    if (rewriteLabel != null) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -912,7 +919,7 @@ private fun CustomRuleCard(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Rewrites to: ${rule.rewriteReplacement}",
+                                text = rewriteLabel,
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontFamily = GoogleSansCode,
                                     fontWeight = FontWeight.SemiBold
