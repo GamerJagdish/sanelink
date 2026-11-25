@@ -288,7 +288,7 @@ fun AutoSanitizeScreen(onBack: () -> Unit) {
             if (needsSystemSignal) {
                 SectionColumn(
                     title = "Catch every copy",
-                    subtitle = "Optional. Pick one. Without it, SaneLink only notices copies made with buttons or menus labelled \"Copy\"."
+                    subtitle = "Optional. Pick one. Without it, SaneLink only notices Copy buttons such as the share sheet's, not copying selected text."
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         ShizukuRow(shizuku = shizuku, serviceEnabled = serviceEnabled, index = 0, count = 2)
@@ -419,7 +419,7 @@ private fun StatusHeroCard(state: AutoSanitizeState, method: DetectionMethod, ve
                     Text(
                         text = when (s) {
                             AutoSanitizeState.FULL -> "Tracking is stripped from copied links before you paste them."
-                            AutoSanitizeState.PARTIAL -> "Links copied with Copy buttons and menus are cleaned. Add Shizuku or the ADB grant below to catch every copy."
+                            AutoSanitizeState.PARTIAL -> "Links copied with Copy buttons (like the share sheet's) are cleaned. Copying selected text needs Shizuku or the ADB grant below."
                             AutoSanitizeState.NEEDS_SETUP -> "Turn on the accessibility service below to start cleaning copied links."
                             AutoSanitizeState.PAUSED -> "Protection is off. Turn it back on from the dashboard."
                         },
