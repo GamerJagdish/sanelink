@@ -19,6 +19,11 @@
         android:name="android.permission.READ_LOGS"
         tools:ignore="ProtectedPermissions" />
 
+    <!-- Package visibility (Android 11+): detect whether the Shizuku app is installed -->
+    <queries>
+        <package android:name="moe.shizuku.privileged.api" />
+    </queries>
+
     <application
         android:name=".SaneLinkApp"
         android:allowBackup="true"
@@ -82,6 +87,18 @@
             android:noHistory="true"
             android:resizeableActivity="true"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density" />
+
+        <!--
+            Shizuku (optional): receives Shizuku's binder so SaneLink can run its clipboard
+            signal watcher with shell privileges. Local IPC only; no network.
+        -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
         <!-- Background Clipboard Accessibility Service -->
         <service

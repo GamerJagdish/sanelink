@@ -11,6 +11,7 @@ import android.os.Looper
 import android.util.Log
 import com.sanelink.app.core.clipboard.ClipboardLogParser
 import com.sanelink.app.core.clipboard.ClipboardLoopGuard
+import com.sanelink.app.shizuku.ShizukuManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -30,9 +31,9 @@ import java.io.InputStreamReader
  * Change signals, in order of reliability:
  * 1. **Clipboard listener** – delivered directly on Android 8–9 (and whenever SaneLink is
  *    focused). We clean in-process, no UI needed.
- * 2. **Logcat denial line** (Android 10+, needs `READ_LOGS` via ADB) – every clipboard change
- *    makes the system log "Denying clipboard access to <our package>". Catches every copy in
- *    every app.
+ * 2. **Logcat denial line** (Android 10+) – every clipboard change makes the system log
+ *    "Denying clipboard access to <our package>". Catches every copy in every app. Read either
+ *    through Shizuku (shell privileges, no prompts) or our own logcat with `READ_LOGS` via ADB.
  * 3. **Accessibility copy heuristics** – "Copy"/"Copy link" clicks, "Copied" toasts and the
  *    Android 13+ clipboard overlay. Works without ADB but only for recognisable copy UIs.
  *
@@ -50,7 +51,9 @@ object ClipboardMonitor {
         val logAccessGranted: Boolean = false,
         /** A logcat stream is currently running. */
         val logStreamRunning: Boolean = false,
-        /** At least one denial line was received, proving the stream sees system logs. */
+        /** Shizuku's shell service is streaming clipboard signals (preferred over our own logcat). */
+        val shizukuActive: Boolean = false,
+        /** At least one system clipboard signal arrived (logcat or Shizuku), proving detection works. */
         val logStreamVerified: Boolean = false,
         /** Android 13+: the stream must be (re)started while SaneLink is open. */
         val logStreamNeedsAppOpen: Boolean = false,
@@ -87,18 +90,27 @@ object ClipboardMonitor {
         }
         _status.update { it.copy(serviceConnected = true) }
         refreshPermissionState(ctx)
+        ShizukuManager.startWatching(
+            onClipboardSignal = ::onSystemClipboardSignal,
+            onActive = { active ->
+                _status.update { it.copy(shizukuActive = active) }
+                // Shizuku replaces our own logcat stream; fall back to it if Shizuku goes away.
+                if (active) stopLogStream() else maybeStartLogStream()
+            }
+        )
         maybeStartLogStream()
     }
 
     /** Called when the accessibility service is unbound or destroyed. */
     fun stop() {
+        ShizukuManager.stopWatching()
         clipboardManager?.removePrimaryClipChangedListener(clipListener)
         clipboardManager = null
         stopLogStream()
         scope?.cancel()
         scope = null
         appContext = null
-        _status.update { it.copy(serviceConnected = false, logStreamRunning = false) }
+        _status.update { it.copy(serviceConnected = false, logStreamRunning = false, shizukuActive = false) }
     }
 
     /** SaneLink UI came to the foreground: good moment to (re)start the logcat stream. */
@@ -116,6 +128,14 @@ object ClipboardMonitor {
         val granted = context.checkSelfPermission(Manifest.permission.READ_LOGS) ==
             PackageManager.PERMISSION_GRANTED
         _status.update { it.copy(logAccessGranted = granted) }
+    }
+
+    /** The system reported a clipboard change for our package (logcat or Shizuku). */
+    private fun onSystemClipboardSignal() {
+        if (!_status.value.logStreamVerified) {
+            _status.update { it.copy(logStreamVerified = true) }
+        }
+        requestFocusedRead()
     }
 
     internal fun reportCleaned() {
@@ -152,6 +172,7 @@ object ClipboardMonitor {
     private fun maybeStartLogStream() {
         val ctx = appContext ?: return
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return // not needed
+        if (_status.value.shizukuActive) return
         if (!_status.value.logAccessGranted) return
         if (logcatProcess?.isAliveCompat() == true) return
 
@@ -183,10 +204,7 @@ object ClipboardMonitor {
                     while (true) {
                         val line = reader.readLine() ?: break
                         if (ClipboardLogParser.isClipboardDenialFor(line, packageName)) {
-                            if (!_status.value.logStreamVerified) {
-                                _status.update { it.copy(logStreamVerified = true) }
-                            }
-                            mainHandler.post { requestFocusedRead() }
+                            mainHandler.post { onSystemClipboardSignal() }
                         }
                     }
                 }
@@ -222,6 +240,7 @@ object ClipboardMonitor {
             process?.destroy()
         } catch (_: Exception) {
         }
+        _status.update { it.copy(logStreamRunning = false) }
     }
 
     private fun Process.isAliveCompat(): Boolean = try {

@@ -1,0 +1,6 @@
+package com.sanelink.app.shizuku;
+
+/** Called from the Shizuku shell process whenever the system reports a clipboard change. */
+interface IClipboardSignalCallback {
+    oneway void onClipboardChanged();
+}

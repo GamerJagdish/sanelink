@@ -6,6 +6,7 @@ import android.os.Bundle
 import com.sanelink.app.data.preferences.AppPreferences
 import com.sanelink.app.data.repository.RuleRepository
 import com.sanelink.app.service.ClipboardMonitor
+import com.sanelink.app.shizuku.ShizukuManager
 
 class SaneLinkApp : Application() {
 
@@ -21,6 +22,7 @@ class SaneLinkApp : Application() {
         preferences = AppPreferences(this)
         repository = RuleRepository(this, preferences)
         registerActivityLifecycleCallbacks(ForegroundTracker)
+        ShizukuManager.init(this)
     }
 
     /**

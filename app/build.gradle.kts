@@ -71,6 +71,8 @@ android {
 
     buildFeatures {
         compose = true
+        aidl = true
+        buildConfig = true
     }
 
     sourceSets {
@@ -111,6 +113,10 @@ dependencies {
     implementation("dev.chrisbanes.haze:haze:2.1.0")
     implementation("dev.chrisbanes.haze:haze-blur:2.1.0")
     implementation("dev.chrisbanes.haze:haze-blur-material3:2.1.0")
+
+    // Shizuku: optional shell-level helper for background clipboard detection (local IPC only)
+    implementation("dev.rikka.shizuku:api:13.1.5")
+    implementation("dev.rikka.shizuku:provider:13.1.5")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
