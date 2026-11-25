@@ -85,11 +85,24 @@ import kotlinx.coroutines.launch
 import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Values carried over from the custom rule editor when the user chooses to patch the matching
+ * built-in rule instead, so nothing they typed is lost.
+ */
+data class PatchPrefill(
+    val params: List<String> = emptyList(),
+    val swapFrom: String? = null,
+    val swapTo: String? = null
+) {
+    val hasContent: Boolean get() = params.isNotEmpty() || !swapTo.isNullOrBlank()
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun BuiltInRuleDetailScreen(
     providerId: String,
     initialPatchMode: Boolean = false,
+    prefill: PatchPrefill? = null,
     onClose: () -> Unit,
     onSavePatch: (UserPatch) -> Unit,
     onResetPatch: () -> Unit
@@ -133,14 +146,22 @@ fun BuiltInRuleDetailScreen(
     // Patch Customization State
     val userPatch = remember(providerId, userPatchedProviderIds) { app.repository.getUserPatch(providerId) }
     val baseRules = remember(rule) { (rule.rules + rule.referralMarketing).distinct() }
-    val removedRules = remember(userPatch, rule) {
+    val removedRules = remember(userPatch, rule, prefill) {
         mutableStateListOf<String>().apply {
             userPatch?.removedRules?.let { addAll(it) }
+            // A carried-over parameter the user had marked "Kept" should be stripped again.
+            prefill?.params?.forEach { p -> removeAll { it.equals(p, ignoreCase = true) } }
         }
     }
-    val addedRules = remember(userPatch, rule) {
+    val addedRules = remember(userPatch, rule, prefill) {
         mutableStateListOf<String>().apply {
             userPatch?.addedRules?.let { addAll(it) }
+            prefill?.params
+                ?.filter { p ->
+                    baseRules.none { it.equals(p, ignoreCase = true) } &&
+                        none { it.equals(p, ignoreCase = true) }
+                }
+                ?.let { addAll(it) }
         }
     }
     var newParamInput by remember { mutableStateOf("") }
@@ -149,11 +170,18 @@ fun BuiltInRuleDetailScreen(
     val defaultSwapFrom = remember(rule, providerId) {
         DomainSwapper.guessDomain(rule.urlPattern, providerId).orEmpty()
     }
-    var swapFromText by remember(userPatch, defaultSwapFrom) {
-        mutableStateOf(userPatch?.frontendSwaps?.firstOrNull()?.from ?: defaultSwapFrom)
+    var swapFromText by remember(userPatch, defaultSwapFrom, prefill) {
+        mutableStateOf(
+            prefill?.swapFrom?.takeIf { !prefill.swapTo.isNullOrBlank() }
+                ?: userPatch?.frontendSwaps?.firstOrNull()?.from
+                ?: defaultSwapFrom
+        )
     }
-    var swapToText by remember(userPatch) {
-        mutableStateOf(userPatch?.frontendSwaps?.firstOrNull()?.to.orEmpty())
+    var swapToText by remember(userPatch, prefill) {
+        mutableStateOf(
+            prefill?.swapTo?.takeIf { it.isNotBlank() }
+                ?: userPatch?.frontendSwaps?.firstOrNull()?.to.orEmpty()
+        )
     }
     val swapInput = parseDomainSwapInput(swapFromText, swapToText)
     val canSavePatch = swapInput.isEmpty || swapInput.isValid
@@ -756,6 +784,33 @@ fun BuiltInRuleDetailScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
+                    if (prefill?.hasContent == true) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_auto_fix_high),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = "Filled in from your custom rule. Review and save to apply.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(16.dp))
 

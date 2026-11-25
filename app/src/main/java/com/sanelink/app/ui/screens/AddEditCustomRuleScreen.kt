@@ -102,7 +102,7 @@ fun AddEditCustomRuleScreen(
     ruleToEdit: CustomRule?,
     onBack: () -> Unit,
     onSave: (CustomRule) -> Unit,
-    onPatchBuiltIn: (String) -> Unit = {}
+    onPatchBuiltIn: (providerId: String, prefill: PatchPrefill) -> Unit = { _, _ -> }
 ) {
     val motionScheme = LocalMotionScheme.current
     // New rules and rules made in simple mode open in simple mode; regex rules open in advanced.
@@ -271,7 +271,17 @@ fun AddEditCustomRuleScreen(
                 matchingProvider?.let { matchedId ->
                     BuiltInMatchBanner(
                         providerName = formatProviderName(matchedId),
-                        onPatch = { onPatchBuiltIn(matchedId) },
+                        onPatch = {
+                            // Carry what the user typed into the patch editor
+                            onPatchBuiltIn(
+                                matchedId,
+                                PatchPrefill(
+                                    params = params.toList(),
+                                    swapFrom = domain.takeIf { mode == MODE_SIMPLE },
+                                    swapTo = swapInput.to.takeIf { mode == MODE_SIMPLE && swapInput.isValid }
+                                )
+                            )
+                        },
                         onKeep = { dismissedConflictProvider = matchedId },
                         modifier = Modifier.padding(bottom = 20.dp)
                     )

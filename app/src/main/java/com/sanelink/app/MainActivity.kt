@@ -89,6 +89,7 @@ import com.sanelink.app.ui.components.PortalSplash
 import com.sanelink.app.ui.screens.AddEditCustomRuleScreen
 import com.sanelink.app.ui.screens.AutoSanitizeScreen
 import com.sanelink.app.ui.screens.BuiltInRuleDetailScreen
+import com.sanelink.app.ui.screens.PatchPrefill
 import com.sanelink.app.ui.screens.HomeScreen
 import com.sanelink.app.ui.screens.RulesScreen
 import com.sanelink.app.ui.screens.SettingsScreen
@@ -183,6 +184,7 @@ class MainActivity : ComponentActivity() {
                 var editingCustomRule by remember { mutableStateOf<CustomRule?>(null) }
                 var viewingBuiltInProviderId by rememberSaveable { mutableStateOf<String?>(null) }
                 var builtInStartPatchMode by rememberSaveable { mutableStateOf(false) }
+                var builtInPatchPrefill by remember { mutableStateOf<PatchPrefill?>(null) }
                 var viewingAutoSanitize by rememberSaveable { mutableStateOf(false) }
 
                 val activeScreen = when {
@@ -294,7 +296,8 @@ class MainActivity : ComponentActivity() {
                                         editingCustomRule = null
                                     }
                                 },
-                                onPatchBuiltIn = { providerId ->
+                                onPatchBuiltIn = { providerId, prefill ->
+                                    builtInPatchPrefill = prefill
                                     isAddingCustomRule = false
                                     editingCustomRule = null
                                     viewingBuiltInProviderId = providerId
@@ -307,9 +310,11 @@ class MainActivity : ComponentActivity() {
                             BuiltInRuleDetailScreen(
                                 providerId = currentProviderId,
                                 initialPatchMode = builtInStartPatchMode,
+                                prefill = builtInPatchPrefill,
                                 onClose = {
                                     viewingBuiltInProviderId = null
                                     builtInStartPatchMode = false
+                                    builtInPatchPrefill = null
                                 },
                                 onSavePatch = { patch ->
                                     scope.launch {
@@ -528,6 +533,7 @@ class MainActivity : ComponentActivity() {
                                                     onSelectBuiltInRule = { providerId ->
                                                         viewingBuiltInProviderId = providerId
                                                         builtInStartPatchMode = false
+                                                        builtInPatchPrefill = null
                                                     },
                                                     builtInListState = builtInListState,
                                                     customListState = customListState
