@@ -2,6 +2,7 @@ package com.sanelink.app.service
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.graphics.drawable.Icon
 import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
@@ -15,6 +16,7 @@ class SaneLinkTileService : TileService() {
         val tile = qsTile ?: return
         tile.state = Tile.STATE_INACTIVE
         tile.label = getString(R.string.tile_label)
+        tile.icon = Icon.createWithResource(this, R.drawable.ic_tile)
         tile.updateTile()
     }
 
