@@ -2,6 +2,7 @@ package com.sanelink.app.core.sanitizer
 
 import com.sanelink.app.core.model.ClearUrlsData
 import com.sanelink.app.core.model.CustomRule
+import com.sanelink.app.core.model.DomainSwap
 import com.sanelink.app.core.model.ProviderRule
 import com.sanelink.app.core.model.SanitizerResult
 import java.net.URI
@@ -143,12 +144,20 @@ class UrlSanitizer(
             }
         }
 
-        // 2. Apply Custom Rules (Priority 1: if custom rule matches, only apply that and stop)
+        // 2. Apply Custom Rules (Priority 1: if custom rule matches, only apply that and stop,
+        //    unless the rule asks to keep built-in cleaning)
         var customMatched = false
+        var stopAfterCustom = false
+        // Domain swaps are applied last, so built-in rules still match the original domain.
+        val customSwaps = mutableListOf<DomainSwap>()
         for ((custom, regex) in compiledCustomPatterns) {
             if (regex.containsMatchIn(currentUrl)) {
                 customMatched = true
+                if (!custom.keepBuiltInCleaning) stopAfterCustom = true
                 matchedSites.add(custom.name)
+                if (!custom.matchDomain.isNullOrBlank() && !custom.swapToDomain.isNullOrBlank()) {
+                    customSwaps.add(DomainSwap(custom.matchDomain, custom.swapToDomain))
+                }
 
                 // Query stripping from custom rule
                 if (custom.stripParameters.isNotEmpty()) {
@@ -177,7 +186,11 @@ class UrlSanitizer(
         }
 
         // If a priority 1 custom rule matched, stop here and do not evaluate built-in providers
-        if (customMatched) {
+        if (customMatched && stopAfterCustom) {
+            DomainSwapper.applyFirst(currentUrl, customSwaps)?.let {
+                currentUrl = it
+                wasModified = true
+            }
             return SanitizerResult(
                 originalText = rawUrl,
                 cleanText = currentUrl,
@@ -260,6 +273,15 @@ class UrlSanitizer(
                 removedParams.addAll(strippedResult.second)
                 wasModified = true
             }
+        }
+
+        // 5. Frontend domain swaps: custom rules first, then built-in patches
+        val providerSwaps = matchingProviders.flatMap { it.second.frontendSwaps }
+        val swapped = DomainSwapper.applyFirst(currentUrl, customSwaps)
+            ?: DomainSwapper.applyFirst(currentUrl, providerSwaps)
+        if (swapped != null) {
+            currentUrl = swapped
+            matchedSites.addAll(matchingProviders.filter { it.second.frontendSwaps.isNotEmpty() }.map { it.first })
         }
 
         if (currentUrl != rawUrl.trim()) {

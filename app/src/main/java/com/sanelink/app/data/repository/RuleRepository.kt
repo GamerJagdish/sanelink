@@ -168,7 +168,8 @@ class RuleRepository(
             merged[id] = current.copy(
                 urlPattern = newUrlPattern,
                 rules = newRules,
-                exceptions = newExceptions
+                exceptions = newExceptions,
+                frontendSwaps = (patch.frontendSwaps + current.frontendSwaps).distinct()
             )
             userPatched.add(id)
         }
