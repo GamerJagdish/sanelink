@@ -25,6 +25,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -181,40 +182,40 @@ fun AutoSanitizeSettingsEntry(
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                // Very narrow screens: scroll instead of cutting the title off
+                modifier = Modifier.basicMarquee()
             )
         },
         supporting = {
-            AnimatedContent(
-                targetState = state,
-                transitionSpec = { fadeIn(motionScheme.fastEffects).togetherWith(fadeOut(motionScheme.fastEffects)) },
-                label = "autoEntrySummary"
-            ) { s ->
-                Text(
-                    text = when (s) {
-                        AutoSanitizeState.FULL -> "Cleaning every link you copy"
-                        AutoSanitizeState.PARTIAL -> "Cleaning links from Copy buttons"
-                        AutoSanitizeState.NEEDS_SETUP -> "Tap to set up"
-                        AutoSanitizeState.PAUSED -> "Paused from the dashboard"
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+            // Status pill sits under the summary so neither the title nor the summary is
+            // squeezed by trailing content; the summary may wrap instead of being cut off.
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                AnimatedContent(
+                    targetState = state,
+                    transitionSpec = { fadeIn(motionScheme.fastEffects).togetherWith(fadeOut(motionScheme.fastEffects)) },
+                    label = "autoEntrySummary"
+                ) { s ->
+                    Text(
+                        text = when (s) {
+                            AutoSanitizeState.FULL -> "Cleaning every link you copy"
+                            AutoSanitizeState.PARTIAL -> "Cleaning links from Copy buttons"
+                            AutoSanitizeState.NEEDS_SETUP -> "Tap to set up"
+                            AutoSanitizeState.PAUSED -> "Paused from the dashboard"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                StatusPill(state)
             }
         },
         trailing = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                StatusPill(state)
-                Spacer(Modifier.size(6.dp))
-                Icon(
-                    painter = painterResource(R.drawable.ic_chevron_right),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            Icon(
+                painter = painterResource(R.drawable.ic_chevron_right),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
         },
         onClick = onClick
     )
