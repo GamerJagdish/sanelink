@@ -507,7 +507,7 @@ private fun ShizukuRow(shizuku: ShizukuManager.State, serviceEnabled: Boolean, i
                         ShizukuManager.State.NOT_RUNNING -> "Shizuku is installed but not running. Start it in the Shizuku app (needed again after each reboot unless your device is rooted)."
                         ShizukuManager.State.PERMISSION_REQUIRED -> "Shizuku is running. Allow SaneLink to use it."
                         ShizukuManager.State.READY -> if (serviceEnabled) "Allowed. Connecting…" else "Allowed. It starts working once the accessibility service is on."
-                        ShizukuManager.State.ACTIVE -> "Connected. Every copy is detected through Shizuku. To stop, open Shizuku and turn SaneLink off under authorized apps."
+                        ShizukuManager.State.ACTIVE -> "Connected. Every copy is detected through Shizuku. To stop, turn SaneLink off in Shizuku's authorized apps. Shizuku then closes SaneLink, which also switches off its accessibility service, so turn that back on above."
                         ShizukuManager.State.UNAVAILABLE -> "This Shizuku version isn't supported or the connection failed. Update Shizuku and restart it."
                     }
                 )
