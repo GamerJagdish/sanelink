@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Match BackgroundDark / OnBackgroundDark (Color.kt). -->
+    <color name="splash_bg">#FF0F1412</color>
+    <color name="splash_fg">#FFE2E7E3</color>
+</resources>

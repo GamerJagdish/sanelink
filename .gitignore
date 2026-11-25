@@ -19,3 +19,6 @@ keystore/
 *.jks
 *.keystore
 *.base64
+
+# Internal secret AI rules i made lol
+AGENTS.md

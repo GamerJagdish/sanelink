@@ -62,6 +62,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -84,6 +85,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import com.sanelink.app.core.model.CustomRule
 import com.sanelink.app.ui.components.AutoFitTitleText
 import com.sanelink.app.ui.components.LocalHazeState
+import com.sanelink.app.ui.components.PortalSplash
 import com.sanelink.app.ui.screens.AddEditCustomRuleScreen
 import com.sanelink.app.ui.screens.BuiltInRuleDetailScreen
 import com.sanelink.app.ui.screens.HomeScreen
@@ -112,10 +114,35 @@ class MainActivity : ComponentActivity() {
     private var isQuickCleaning = false
     private var quickCleanExecuted = false
 
+    // X-style portal launch animation (cold start only)
+    private var showPortalSplash by mutableStateOf(false)
+    private var splashIconBounds by mutableStateOf<Rect?>(null)
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         checkQuickCleanIntent(intent)
+
+        showPortalSplash = savedInstanceState == null && !isQuickCleaning
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Hand off from the system splash to PortalSplash without the default fade:
+            // remember where the platform drew the icon so the overlay lines up exactly.
+            splashScreen.setOnExitAnimationListener { splashView ->
+                splashView.iconView?.let { icon ->
+                    if (icon.width > 0) {
+                        val loc = IntArray(2)
+                        icon.getLocationInWindow(loc)
+                        splashIconBounds = Rect(
+                            loc[0].toFloat(),
+                            loc[1].toFloat(),
+                            (loc[0] + icon.width).toFloat(),
+                            (loc[1] + icon.height).toFloat()
+                        )
+                    }
+                }
+                splashView.remove()
+            }
+        }
         
         // True edge-to-edge with transparent bars and zero OS contrast scrim
         enableEdgeToEdge(
@@ -136,6 +163,11 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             SaneLinkTheme {
+                PortalSplash(
+                    visible = showPortalSplash,
+                    splashIconBounds = splashIconBounds,
+                    onFinished = { showPortalSplash = false }
+                ) {
                 val scope = rememberCoroutineScope()
                 var selectedTab by rememberSaveable { mutableIntStateOf(0) }
                 var rulesSubTab by rememberSaveable { mutableIntStateOf(0) } // 0: Built-in, 1: Custom
@@ -570,6 +602,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+            }
 }
     }
 

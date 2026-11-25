@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Splash / window colors. Match BackgroundLight / OnBackgroundLight (Color.kt) for pre-Android 12 static theme. -->
+    <color name="splash_bg">#FFF7FAF7</color>
+    <color name="splash_fg">#FF191C1B</color>
+</resources>

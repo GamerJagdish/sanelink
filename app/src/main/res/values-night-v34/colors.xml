@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 14+: same role colors dynamicDarkColorScheme() uses for background / onBackground. -->
+    <color name="splash_bg">@android:color/system_background_dark</color>
+    <color name="splash_fg">@android:color/system_on_background_dark</color>
+</resources>
