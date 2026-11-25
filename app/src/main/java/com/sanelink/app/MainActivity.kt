@@ -87,6 +87,7 @@ import com.sanelink.app.ui.components.AutoFitTitleText
 import com.sanelink.app.ui.components.LocalHazeState
 import com.sanelink.app.ui.components.PortalSplash
 import com.sanelink.app.ui.screens.AddEditCustomRuleScreen
+import com.sanelink.app.ui.screens.AutoSanitizeScreen
 import com.sanelink.app.ui.screens.BuiltInRuleDetailScreen
 import com.sanelink.app.ui.screens.HomeScreen
 import com.sanelink.app.ui.screens.RulesScreen
@@ -102,7 +103,8 @@ import kotlinx.coroutines.launch
 private enum class ActiveScreen {
     MAIN,
     CUSTOM_RULE,
-    BUILT_IN_DETAIL
+    BUILT_IN_DETAIL,
+    AUTO_SANITIZE
 }
 
 class MainActivity : ComponentActivity() {
@@ -181,10 +183,12 @@ class MainActivity : ComponentActivity() {
                 var editingCustomRule by remember { mutableStateOf<CustomRule?>(null) }
                 var viewingBuiltInProviderId by rememberSaveable { mutableStateOf<String?>(null) }
                 var builtInStartPatchMode by rememberSaveable { mutableStateOf(false) }
+                var viewingAutoSanitize by rememberSaveable { mutableStateOf(false) }
 
                 val activeScreen = when {
                     isAddingCustomRule || editingCustomRule != null -> ActiveScreen.CUSTOM_RULE
                     viewingBuiltInProviderId != null -> ActiveScreen.BUILT_IN_DETAIL
+                    viewingAutoSanitize -> ActiveScreen.AUTO_SANITIZE
                     else -> ActiveScreen.MAIN
                 }
 
@@ -318,6 +322,10 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             )
+                        }
+                        ActiveScreen.AUTO_SANITIZE -> {
+                            BackHandler { viewingAutoSanitize = false }
+                            AutoSanitizeScreen(onBack = { viewingAutoSanitize = false })
                         }
                         ActiveScreen.MAIN -> {
                             Scaffold(
@@ -524,7 +532,9 @@ class MainActivity : ComponentActivity() {
                                                     builtInListState = builtInListState,
                                                     customListState = customListState
                                                 )
-                                                2 -> SettingsScreen()
+                                                2 -> SettingsScreen(
+                                                    onOpenAutoSanitize = { viewingAutoSanitize = true }
+                                                )
                                             }
                                         }
                                     }

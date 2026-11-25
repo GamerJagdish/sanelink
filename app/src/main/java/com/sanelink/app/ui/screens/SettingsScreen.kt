@@ -1,6 +1,5 @@
 package com.sanelink.app.ui.screens
 
-import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -9,8 +8,6 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import android.provider.Settings
-import android.view.accessibility.AccessibilityManager
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
@@ -50,7 +47,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -67,12 +63,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.sanelink.app.R
 import com.sanelink.app.SaneLinkApp
-import com.sanelink.app.service.ClipboardAccessibilityService
 import com.sanelink.app.ui.components.ExpressiveLeadingBadge
 import com.sanelink.app.ui.components.ExpressiveSegmentedListItem
 import com.sanelink.app.ui.components.ExpressiveSwitch
@@ -83,6 +75,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
+    onOpenAutoSanitize: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -92,21 +85,6 @@ fun SettingsScreen(
     val motionScheme = LocalMotionScheme.current
 
     var showAboutDialog by remember { mutableStateOf(false) }
-
-    val lifecycleOwner = LocalLifecycleOwner.current
-    var isServiceEnabled by remember { mutableStateOf(isAccessibilityServiceEnabled(context)) }
-
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                isServiceEnabled = isAccessibilityServiceEnabled(context)
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
 
     val hapticEnabled by app.preferences.hapticFeedbackEnabled.collectAsState(initial = true)
     val toastEnabled by app.preferences.showToastEnabled.collectAsState(initial = true)
@@ -147,7 +125,7 @@ fun SettingsScreen(
                 modifier = Modifier.padding(start = 12.dp)
             )
 
-            AutoSanitizeSetupSection(isServiceEnabled = isServiceEnabled)
+            AutoSanitizeSettingsEntry(onClick = onOpenAutoSanitize)
         }
 
         // Group 2: Preferences (Material 3 Expressive Segmented Container)
@@ -527,21 +505,4 @@ private fun triggerHapticFeedback(context: Context) {
     } catch (_: Exception) {
         // Non-critical if vibration unavailable
     }
-}
-
-private fun isAccessibilityServiceEnabled(context: Context): Boolean {
-    val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
-    val enabledServices = am?.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
-    val enabledByManager = enabledServices?.any {
-        it.resolveInfo.serviceInfo.packageName == context.packageName &&
-            it.resolveInfo.serviceInfo.name == ClipboardAccessibilityService::class.java.name
-    } == true
-    if (enabledByManager) return true
-
-    val expectedComponentName = "${context.packageName}/${ClipboardAccessibilityService::class.java.name}"
-    val enabledString = Settings.Secure.getString(
-        context.contentResolver,
-        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-    ) ?: return false
-    return enabledString.split(":").any { it.equals(expectedComponentName, ignoreCase = true) }
 }
