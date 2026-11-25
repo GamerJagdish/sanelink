@@ -42,6 +42,16 @@ class CopySignalDetectorTest {
     }
 
     @Test
+    fun `android 12+ paste notices are not copy signals`() {
+        // Shown by the framework whenever any app reads the clipboard, including our own reader
+        assertFalse(signal(EventKind.TOAST, "Chrome pasted from your clipboard", pkg = "android"))
+        assertFalse(signal(EventKind.TOAST, "SaneLink pasted from your clipboard", pkg = "android"))
+        assertFalse(signal(EventKind.TOAST, "Notes pasted from your clipboard", pkg = "com.example.notes"))
+        // A regular app toast about copying still counts
+        assertTrue(signal(EventKind.TOAST, "Copied to clipboard", pkg = "com.example.notes"))
+    }
+
+    @Test
     fun `android 13 clipboard overlay from system ui is detected`() {
         assertTrue(signal(EventKind.WINDOW_STATE, pkg = "com.android.systemui", cls = "com.android.systemui.clipboardoverlay.ClipboardOverlayWindow"))
         assertTrue(signal(EventKind.WINDOW_STATE, "Copied", pkg = "com.android.systemui", cls = "android.widget.FrameLayout"))

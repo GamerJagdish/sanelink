@@ -16,6 +16,13 @@ object CopySignalDetector {
 
     private const val SYSTEM_UI = "com.android.systemui"
 
+    /**
+     * The framework itself ("android") shows "<App> pasted from your clipboard" toasts on
+     * Android 12+ whenever any app reads the clipboard, including SaneLink's own reader. Those
+     * are paste notices, not copies, and reacting to them would re-open the reader on every paste.
+     */
+    private const val FRAMEWORK = "android"
+
     /** Labels of buttons / menu items that copy something ("Copy", "Copy link", ...). */
     private val copyActionWords = listOf(
         "copy",          // en
@@ -46,6 +53,9 @@ object CopySignalDetector {
         "disalin", "đã sao chép", "कॉपी किया",
     )
 
+    /** Paste notices ("Chrome pasted from your clipboard"), which also mention the clipboard. */
+    private val pasteNoticeWords = listOf("pasted", "pegó", "a collé", "eingefügt", "incollato", "colou")
+
     /** Texts that contain a copy word but are clearly not a copy action. */
     private val falsePositiveWords = listOf("copyright", "copies")
 
@@ -65,7 +75,10 @@ object CopySignalDetector {
 
             // Toasts / announcements like "Link copied to clipboard"
             CopySignalDetector.EventKind.TOAST,
-            CopySignalDetector.EventKind.ANNOUNCEMENT -> containsAny(joined, copiedConfirmationWords)
+            CopySignalDetector.EventKind.ANNOUNCEMENT ->
+                packageName != FRAMEWORK &&
+                    !containsAny(joined, pasteNoticeWords) &&
+                    containsAny(joined, copiedConfirmationWords)
 
             // Android 13+ system clipboard overlay appearing after any copy
             CopySignalDetector.EventKind.WINDOW_STATE ->
