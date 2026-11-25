@@ -17,7 +17,8 @@
         "vrfl",
         "rpxt",
         "psln",
-        "dlrf"
+        "dlrf",
+        "(?!(?:next|page|code|lang)$)[a-z]{4}"
       ]
     },
     "threads": {
