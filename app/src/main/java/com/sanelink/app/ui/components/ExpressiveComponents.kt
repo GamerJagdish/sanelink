@@ -117,6 +117,12 @@ import com.sanelink.app.core.model.SanitizerResult
 import com.sanelink.app.ui.theme.GoogleSansCode
 import com.sanelink.app.ui.theme.LocalMotionScheme
 import com.sanelink.app.ui.theme.googleSansFlex
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.ui.composed
 
 @Composable
 fun ExpressiveSwitch(
@@ -1794,4 +1800,147 @@ fun ExpressiveDualActionButtonBar(
             }
         }
     }
+}
+
+
+/**
+ * Tactile drag-follow wobble shared by SaneLink's buttons: while pressed, the element follows
+ * the finger horizontally at 35% (clamped to ±48px) and springs back on release.
+ *
+ * Observes pointer events on the Initial pass without consuming them, so clicks still work.
+ */
+fun Modifier.expressiveDragWobble(enabled: Boolean = true): Modifier = composed {
+    val motionScheme = LocalMotionScheme.current
+    var dragOffsetX by remember { mutableFloatStateOf(0f) }
+    val animatedDragOffset by animateFloatAsState(
+        targetValue = dragOffsetX,
+        animationSpec = motionScheme.fastSpatial,
+        label = "dragWobbleOffset"
+    )
+    this
+        .graphicsLayer { translationX = animatedDragOffset }
+        .pointerInput(enabled) {
+            if (!enabled) return@pointerInput
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                val startX = down.position.x
+                try {
+                    do {
+                        val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                        val current = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (current.pressed) {
+                            val rawDelta = current.position.x - startX
+                            dragOffsetX = (rawDelta * 0.35f).coerceIn(-48f, 48f)
+                        }
+                    } while (event.changes.any { it.id == down.id && it.pressed })
+                } finally {
+                    dragOffsetX = 0f
+                }
+            }
+        }
+}
+
+/**
+ * Full-width M3 Expressive button with SaneLink's standard tactile feel: horizontal drag
+ * wobble, squash (0.98 × 0.92) and pill → squircle corner morph on press.
+ *
+ * Tonal by default; pass [filled] for the primary-colored variant.
+ */
+@Composable
+fun ExpressiveTactileButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    filled: Boolean = false,
+    colors: ButtonColors? = null,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
+    content: @Composable RowScope.() -> Unit
+) {
+    val motionScheme = LocalMotionScheme.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    val scaleX by animateFloatAsState(
+        targetValue = if (isPressed && enabled) 0.98f else 1f,
+        animationSpec = motionScheme.fastSpatial,
+        label = "tactileBtnScaleX"
+    )
+    val scaleY by animateFloatAsState(
+        targetValue = if (isPressed && enabled) 0.92f else 1f,
+        animationSpec = motionScheme.fastSpatial,
+        label = "tactileBtnScaleY"
+    )
+    val cornerRadius by animateDpAsState(
+        targetValue = if (isPressed && enabled) 14.dp else 24.dp,
+        animationSpec = spring(
+            dampingRatio = motionScheme.fastSpatial.dampingRatio,
+            stiffness = motionScheme.fastSpatial.stiffness
+        ),
+        label = "tactileBtnCorner"
+    )
+
+    val buttonModifier = modifier
+        .graphicsLayer {
+            this.scaleX = scaleX
+            this.scaleY = scaleY
+        }
+        .expressiveDragWobble(enabled)
+
+    if (filled) {
+        Button(
+            onClick = onClick,
+            enabled = enabled,
+            interactionSource = interactionSource,
+            shape = RoundedCornerShape(cornerRadius),
+            colors = colors ?: ButtonDefaults.buttonColors(),
+            contentPadding = contentPadding,
+            modifier = buttonModifier,
+            content = content
+        )
+    } else {
+        FilledTonalButton(
+            onClick = onClick,
+            enabled = enabled,
+            interactionSource = interactionSource,
+            shape = RoundedCornerShape(cornerRadius),
+            colors = colors ?: ButtonDefaults.filledTonalButtonColors(),
+            contentPadding = contentPadding,
+            modifier = buttonModifier,
+            content = content
+        )
+    }
+}
+
+/** Tonal icon button with the same squash, corner morph and drag wobble as [ExpressiveTactileButton]. */
+@Composable
+fun ExpressiveTactileIconButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    val motionScheme = LocalMotionScheme.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scaleX by animateFloatAsState(if (isPressed) 0.96f else 1f, motionScheme.fastSpatial, label = "tactileIconScaleX")
+    val scaleY by animateFloatAsState(if (isPressed) 0.88f else 1f, motionScheme.fastSpatial, label = "tactileIconScaleY")
+    val cornerRadius by animateDpAsState(
+        targetValue = if (isPressed) 12.dp else 20.dp,
+        animationSpec = spring(
+            dampingRatio = motionScheme.fastSpatial.dampingRatio,
+            stiffness = motionScheme.fastSpatial.stiffness
+        ),
+        label = "tactileIconCorner"
+    )
+    FilledTonalIconButton(
+        onClick = onClick,
+        interactionSource = interactionSource,
+        shape = RoundedCornerShape(cornerRadius),
+        modifier = modifier
+            .graphicsLayer {
+                this.scaleX = scaleX
+                this.scaleY = scaleY
+            }
+            .expressiveDragWobble(),
+        content = content
+    )
 }
