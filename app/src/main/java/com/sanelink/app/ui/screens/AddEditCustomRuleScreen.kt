@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -214,31 +215,39 @@ fun AddEditCustomRuleScreen(
                 .imeNestedScroll()
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
-            // Presets: plain-domain starting points
-            SectionLabel("START FROM AN EXAMPLE")
-            Spacer(modifier = Modifier.height(8.dp))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                rulePresets.forEach { preset ->
-                    SuggestionChip(
-                        text = preset.label,
-                        onClick = {
-                            mode = MODE_SIMPLE
-                            name = preset.name
-                            website = preset.website
-                            swapTo = preset.swapTo
-                            params.clear()
-                            params.addAll(preset.params)
-                            keepBuiltIn = true
-                            dismissedConflictProvider = null
-                        }
+            // Presets: one compact, horizontally scrolling row; only when creating a rule
+            if (!isEditing) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Try",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
+                    rulePresets.forEach { preset ->
+                        SuggestionChip(
+                            text = preset.label,
+                            onClick = {
+                                mode = MODE_SIMPLE
+                                name = preset.name
+                                website = preset.website
+                                swapTo = preset.swapTo
+                                params.clear()
+                                params.addAll(preset.params)
+                                keepBuiltIn = true
+                                dismissedConflictProvider = null
+                            }
+                        )
+                    }
                 }
+                Spacer(modifier = Modifier.height(16.dp))
             }
-
-            Spacer(modifier = Modifier.height(20.dp))
 
             ExpressiveConnectedButtonGroup(
                 options = listOf("Simple", "Advanced (regex)"),
