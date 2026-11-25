@@ -10,6 +10,15 @@
     <!-- Subtle haptic feedback when a link is cleaned -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!--
+        Optional, granted once over ADB (adb shell pm grant <pkg> android.permission.READ_LOGS).
+        Lets SaneLink see the system's "clipboard changed" log line so it catches copies in
+        every app on Android 10+. Log lines are matched in memory and never stored.
+    -->
+    <uses-permission
+        android:name="android.permission.READ_LOGS"
+        tools:ignore="ProtectedPermissions" />
+
     <application
         android:name=".SaneLinkApp"
         android:allowBackup="true"
@@ -62,9 +71,22 @@
             </intent-filter>
         </activity>
 
+        <!-- Invisible focus holder: Android 10+ only lets the focused app read the clipboard -->
+        <activity
+            android:name=".service.ClipboardReaderActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SaneLink.ClipboardReader"
+            android:taskAffinity=""
+            android:launchMode="singleInstance"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:resizeableActivity="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density" />
+
         <!-- Background Clipboard Accessibility Service -->
         <service
             android:name=".service.ClipboardAccessibilityService"
+            android:label="@string/app_name"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="true">
             <intent-filter>
