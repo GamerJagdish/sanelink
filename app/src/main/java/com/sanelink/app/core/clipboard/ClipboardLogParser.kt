@@ -1,9 +1,5 @@
 package com.sanelink.app.core.clipboard
 
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-
 /**
  * Parses system log lines emitted by Android's `ClipboardService`.
  *
@@ -46,9 +42,12 @@ object ClipboardLogParser {
     /**
      * Arguments for a `logcat` process that streams only `ClipboardService` errors
      * logged from [startTimeMillis] onwards (so stale lines from before are not replayed).
+     *
+     * The start time uses logcat's epoch `sssss.mmm` form, so it doesn't depend on the
+     * caller's time zone (the Shizuku shell process may not share the app's).
      */
-    fun buildLogcatCommand(startTimeMillis: Long, locale: Locale = Locale.US): List<String> {
-        val since = SimpleDateFormat("MM-dd HH:mm:ss.SSS", locale).format(Date(startTimeMillis))
+    fun buildLogcatCommand(startTimeMillis: Long): List<String> {
+        val since = "${startTimeMillis / 1000}.${(startTimeMillis % 1000).toString().padStart(3, '0')}"
         return listOf(
             "logcat",
             "-v", "brief",

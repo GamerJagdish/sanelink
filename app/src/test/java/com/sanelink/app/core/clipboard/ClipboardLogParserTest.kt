@@ -4,9 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.Calendar
-import java.util.Locale
-import java.util.TimeZone
 
 class ClipboardLogParserTest {
 
@@ -48,17 +45,11 @@ class ClipboardLogParserTest {
     }
 
     @Test
-    fun `logcat command only streams ClipboardService errors from start time`() {
-        val tz = TimeZone.getDefault()
-        val cal = Calendar.getInstance(tz).apply {
-            clear()
-            set(2026, Calendar.NOVEMBER, 26, 9, 5, 7)
-            set(Calendar.MILLISECOND, 42)
-        }
-        val cmd = ClipboardLogParser.buildLogcatCommand(cal.timeInMillis, Locale.US)
+    fun `logcat command only streams ClipboardService errors from epoch start time`() {
         assertEquals(
-            listOf("logcat", "-v", "brief", "-T", "11-26 09:05:07.042", "ClipboardService:E", "*:S"),
-            cmd
+            listOf("logcat", "-v", "brief", "-T", "1795600000.042", "ClipboardService:E", "*:S"),
+            ClipboardLogParser.buildLogcatCommand(1_795_600_000_042L)
         )
+        assertEquals("1795600000.000", ClipboardLogParser.buildLogcatCommand(1_795_600_000_000L)[4])
     }
 }
