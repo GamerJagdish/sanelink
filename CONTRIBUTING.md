@@ -187,6 +187,17 @@ If you would like to contribute Kotlin or Jetpack Compose code:
    - `docs: ...` for documentation changes
 7. Push to your branch and open a Pull Request against `main`.
 
+### Releases & Signing
+
+[`.github/workflows/build-release.yml`](.github/workflows/build-release.yml) builds a signed release APK and publishes a GitHub Release when a `v*` tag is pushed, when the version in `app/build.gradle.kts` changes on `main`, or when run manually.
+
+So users can update without signature errors, set these repository secrets:
+
+- `RELEASE_KEYSTORE_BASE64`: the release keystore, base64-encoded
+- `KEYSTORE_PASSWORD`: the keystore password
+- `KEY_ALIAS`: the key alias (default `sanelink`)
+- `KEY_PASSWORD`: the private key password
+
 ---
 
 ## 5. Reporting Issues
