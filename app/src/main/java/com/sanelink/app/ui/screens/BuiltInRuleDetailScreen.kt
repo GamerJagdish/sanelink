@@ -71,7 +71,11 @@ import androidx.compose.ui.unit.sp
 import com.sanelink.app.R
 import com.sanelink.app.SaneLinkApp
 import com.sanelink.app.core.model.ProviderRule
+import com.sanelink.app.core.model.DomainSwap
 import com.sanelink.app.core.model.UserPatch
+import com.sanelink.app.core.sanitizer.DomainSwapper
+import com.sanelink.app.ui.components.DomainSwapEditor
+import com.sanelink.app.ui.components.parseDomainSwapInput
 import com.sanelink.app.ui.components.AutoFitTitleText
 import com.sanelink.app.ui.components.ExpressiveDualActionButtonBar
 import com.sanelink.app.ui.components.ExpressiveSwitch
@@ -141,11 +145,28 @@ fun BuiltInRuleDetailScreen(
     }
     var newParamInput by remember { mutableStateOf("") }
 
+    // Frontend swap ("open on a different site"), plain domains only
+    val defaultSwapFrom = remember(rule, providerId) {
+        DomainSwapper.guessDomain(rule.urlPattern, providerId).orEmpty()
+    }
+    var swapFromText by remember(userPatch, defaultSwapFrom) {
+        mutableStateOf(userPatch?.frontendSwaps?.firstOrNull()?.from ?: defaultSwapFrom)
+    }
+    var swapToText by remember(userPatch) {
+        mutableStateOf(userPatch?.frontendSwaps?.firstOrNull()?.to.orEmpty())
+    }
+    val swapInput = parseDomainSwapInput(swapFromText, swapToText)
+    val canSavePatch = swapInput.isEmpty || swapInput.isValid
+
     val activePatchParams = remember(baseRules, removedRules.toList(), addedRules.toList()) {
         (baseRules.filterNot { removedRules.contains(it) } + addedRules).distinct()
     }
-    val patchSimulatedResult = remember(testUrlInput, activePatchParams) {
-        simulateSanitization(testUrlInput, activePatchParams)
+    val patchSimulatedResult = remember(testUrlInput, activePatchParams, swapInput) {
+        val stripped = simulateSanitization(testUrlInput, activePatchParams)
+        val swapped = if (swapInput.isValid) {
+            DomainSwapper.apply(stripped.first, DomainSwap(swapInput.from!!, swapInput.to!!))
+        } else null
+        Triple(swapped ?: stripped.first, stripped.second, swapped != null)
     }
 
     Scaffold(
@@ -216,13 +237,20 @@ fun BuiltInRuleDetailScreen(
                 ExpressiveDualActionButtonBar(
                     primaryText = "Save Patch",
                     secondaryText = "Cancel",
+                    primaryEnabled = canSavePatch,
                     onPrimaryClick = {
                         val patch = UserPatch(
                             providerId = providerId,
                             isEnabled = true,
                             addedRules = addedRules.toList(),
                             removedRules = removedRules.toList(),
-                            customUrlPattern = null,
+                            customUrlPattern = userPatch?.customUrlPattern,
+                            customExceptions = userPatch?.customExceptions.orEmpty(),
+                            frontendSwaps = if (swapInput.isValid) {
+                                listOf(DomainSwap(swapInput.from!!, swapInput.to!!))
+                            } else {
+                                emptyList()
+                            },
                             updatedAt = System.currentTimeMillis()
                         )
                         onSavePatch(patch)
@@ -234,6 +262,8 @@ fun BuiltInRuleDetailScreen(
                         userPatch?.removedRules?.let { removedRules.addAll(it) }
                         addedRules.clear()
                         userPatch?.addedRules?.let { addedRules.addAll(it) }
+                        swapFromText = userPatch?.frontendSwaps?.firstOrNull()?.from ?: defaultSwapFrom
+                        swapToText = userPatch?.frontendSwaps?.firstOrNull()?.to.orEmpty()
                         isPatchMode = false
                     }
                 )
@@ -515,6 +545,36 @@ fun BuiltInRuleDetailScreen(
                         )
                     }
 
+                    // Frontend swaps (from user patch)
+                    if (rule.frontendSwaps.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(18.dp))
+                        Text(
+                            text = "OPENS ON A DIFFERENT SITE",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            letterSpacing = 1.sp
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        rule.frontendSwaps.forEach { swap ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 2.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.tertiaryContainer)
+                                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                            ) {
+                                Text(
+                                    text = "${swap.from} → ${swap.to}",
+                                    fontFamily = GoogleSansCode,
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                            }
+                        }
+                    }
+
                     // Stripped Tracking Parameters
                     val allRules = rule.rules + rule.referralMarketing
                     if (allRules.isNotEmpty()) {
@@ -736,9 +796,9 @@ fun BuiltInRuleDetailScreen(
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            if (patchSimulatedResult.second.isNotEmpty()) {
+                            if (patchSimulatedResult.second.isNotEmpty() || patchSimulatedResult.third) {
                                 Text(
-                                    text = "STRIPPED BY YOUR PATCH",
+                                    text = if (patchSimulatedResult.third) "RESULT WITH YOUR PATCH" else "STRIPPED BY YOUR PATCH",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary,
@@ -886,6 +946,29 @@ fun BuiltInRuleDetailScreen(
                             }
                         }
                     }
+
+                    // Frontend swap
+                    Spacer(modifier = Modifier.height(18.dp))
+                    Text(
+                        text = "OPEN ON A DIFFERENT SITE (OPTIONAL)",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = 1.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Send ${formatProviderName(providerId)} links to an alternative frontend. Type plain website names; tracking is still removed by this rule.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    DomainSwapEditor(
+                        fromText = swapFromText,
+                        onFromChange = { swapFromText = it },
+                        toText = swapToText,
+                        onToChange = { swapToText = it }
+                    )
 
                     // Built-in parameters toggle list
                     if (baseRules.isNotEmpty()) {
