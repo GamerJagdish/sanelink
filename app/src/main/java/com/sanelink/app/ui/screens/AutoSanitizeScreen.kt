@@ -34,7 +34,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -78,6 +77,7 @@ import com.sanelink.app.shizuku.ShizukuManager
 import com.sanelink.app.ui.components.AutoFitTitleText
 import com.sanelink.app.ui.components.ExpressiveLeadingBadge
 import com.sanelink.app.ui.components.ExpressiveSegmentedListItem
+import com.sanelink.app.ui.components.ExpressiveSingleActionButtonBar
 import com.sanelink.app.ui.components.ExpressiveTactileButton
 import com.sanelink.app.ui.components.ExpressiveTactileIconButton
 import com.sanelink.app.ui.theme.GoogleSansCode
@@ -261,22 +261,13 @@ fun AutoSanitizeScreen(onBack: () -> Unit) {
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
                 },
-                navigationIcon = {
-                    ExpressiveTactileIconButton(
-                        onClick = onBack,
-                        modifier = Modifier.padding(start = 8.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_arrow_back),
-                            contentDescription = "Back",
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
+        },
+        bottomBar = {
+            ExpressiveSingleActionButtonBar(text = "Close", onClick = onBack)
         }
     ) { innerPadding ->
         Column(
@@ -284,7 +275,6 @@ fun AutoSanitizeScreen(onBack: () -> Unit) {
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .navigationBarsPadding()
                 .padding(horizontal = 20.dp)
                 .padding(top = 8.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)

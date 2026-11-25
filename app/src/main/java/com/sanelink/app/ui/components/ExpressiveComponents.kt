@@ -1944,3 +1944,52 @@ fun ExpressiveTactileIconButton(
         content = content
     )
 }
+
+/**
+ * Single-action bottom bar for full-screen pages without a primary action (e.g. "Close").
+ * Matches [ExpressiveDualActionButtonBar]'s surface and insets, and stays in view while the
+ * page content scrolls.
+ */
+@Composable
+fun ExpressiveSingleActionButtonBar(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val navBarBottom = WindowInsets.navigationBars
+        .exclude(WindowInsets.ime)
+        .asPaddingValues()
+        .calculateBottomPadding()
+
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        modifier = modifier
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = navBarBottom)
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+        ) {
+            ExpressiveTactileButton(
+                onClick = onClick,
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Text(
+                    text = text,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
