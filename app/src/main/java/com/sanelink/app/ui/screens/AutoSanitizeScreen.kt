@@ -507,7 +507,7 @@ private fun ShizukuRow(shizuku: ShizukuManager.State, serviceEnabled: Boolean, i
                         ShizukuManager.State.NOT_RUNNING -> "Shizuku is installed but not running. Start it in the Shizuku app (needed again after each reboot unless your device is rooted)."
                         ShizukuManager.State.PERMISSION_REQUIRED -> "Shizuku is running. Allow SaneLink to use it."
                         ShizukuManager.State.READY -> if (serviceEnabled) "Allowed. Connecting…" else "Allowed. It starts working once the accessibility service is on."
-                        ShizukuManager.State.ACTIVE -> "Connected. Every copy is detected through Shizuku."
+                        ShizukuManager.State.ACTIVE -> "Connected. Every copy is detected through Shizuku. To stop, open Shizuku and turn SaneLink off under authorized apps."
                         ShizukuManager.State.UNAVAILABLE -> "This Shizuku version isn't supported or the connection failed. Update Shizuku and restart it."
                     }
                 )
@@ -525,9 +525,13 @@ private fun ShizukuRow(shizuku: ShizukuManager.State, serviceEnabled: Boolean, i
                     }
                     ShizukuManager.State.READY,
                     ShizukuManager.State.ACTIVE -> TactileActionButton(
-                        text = if (active) "Connected" else "Allowed",
-                        icon = R.drawable.ic_check,
-                        onClick = { ShizukuManager.refresh() }
+                        text = if (active) "Connected · Manage" else "Allowed · Manage",
+                        icon = R.drawable.ic_open_in_new,
+                        // Access is granted and revoked in Shizuku itself, so take the user there.
+                        onClick = {
+                            val intent = ShizukuManager.launchIntent(context)
+                            if (intent != null) context.startActivity(intent) else ShizukuManager.refresh()
+                        }
                     )
                 }
             }

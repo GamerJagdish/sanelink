@@ -166,8 +166,19 @@ object ShizukuManager {
 
     /** Re-evaluates install / running / permission state (e.g. when the settings page resumes). */
     fun refresh() {
-        if (_state.value == State.ACTIVE && shellService != null) return
-        _state.value = computeState()
+        val current = computeState()
+        if (_state.value == State.ACTIVE && shellService != null) {
+            if (current == State.READY) return // still allowed and connected
+            // Access was revoked (or Shizuku stopped) while we were connected: drop the link.
+            try {
+                shellService?.stopClipboardWatch()
+            } catch (_: Exception) {
+            }
+            shellService = null
+            setActive(false, current)
+            return
+        }
+        _state.value = current
     }
 
     /** Shows Shizuku's permission dialog. Call from the UI. */
