@@ -79,6 +79,8 @@ import com.sanelink.app.SaneLinkApp
 import com.sanelink.app.core.model.CustomRule
 import com.sanelink.app.ui.components.AutoFitTitleText
 import com.sanelink.app.ui.components.ExpressiveDualActionButtonBar
+import com.sanelink.app.ui.components.ExpressiveTactileButton
+import androidx.compose.foundation.layout.PaddingValues
 import com.sanelink.app.ui.theme.GoogleSansCode
 import com.sanelink.app.ui.theme.LocalMotionScheme
 
@@ -250,82 +252,12 @@ fun AddEditCustomRuleScreen(
                 exit = fadeOut() + shrinkVertically()
             ) {
                 matchingProvider?.let { matchedId ->
-                    Card(
-                        shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.35f)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 16.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_info),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.tertiary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Built-in rule for ${formatProviderName(matchedId)} exists",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onTertiaryContainer
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(6.dp))
-
-                            Text(
-                                text = "SaneLink already has built-in tracking rules for this site. You can patch the built-in rule instead, or keep this custom rule (Custom rules are evaluated first with Priority 1).",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.9f),
-                                lineHeight = 18.sp
-                            )
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                ElevatedButton(
-                                    onClick = { onPatchBuiltIn(matchedId) },
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = ButtonDefaults.elevatedButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.tertiary,
-                                        contentColor = MaterialTheme.colorScheme.onTertiary
-                                    ),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(
-                                        text = "Patch Built-in Rule",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-
-                                OutlinedButton(
-                                    onClick = { dismissedConflictProvider = matchedId },
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-                                    ),
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.45f)),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(
-                                        text = "Keep Independent",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    BuiltInMatchBanner(
+                        providerName = formatProviderName(matchedId),
+                        onPatch = { onPatchBuiltIn(matchedId) },
+                        onKeep = { dismissedConflictProvider = matchedId },
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
                 }
             }
 
@@ -434,6 +366,100 @@ fun AddEditCustomRuleScreen(
             )
 
             Spacer(modifier = Modifier.height(64.dp))
+        }
+    }
+}
+
+/**
+ * Suggests patching the existing built-in rule instead of creating a duplicate custom rule.
+ *
+ * Uses solid container colours (no alpha blending) so it stays vivid and readable on every
+ * palette, including dark themes and devices without dynamic colour.
+ */
+@Composable
+private fun BuiltInMatchBanner(
+    providerName: String,
+    onPatch: () -> Unit,
+    onKeep: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scheme = MaterialTheme.colorScheme
+    Surface(
+        shape = RoundedCornerShape(28.dp),
+        color = scheme.tertiaryContainer,
+        contentColor = scheme.onTertiaryContainer,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(scheme.tertiary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_auto_fix_high),
+                        contentDescription = null,
+                        tint = scheme.onTertiary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "$providerName is already built in",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = scheme.onTertiaryContainer
+                    )
+                    Text(
+                        text = "Suggestion",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = scheme.onTertiaryContainer
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = "Patching keeps SaneLink's tracker list for this site, and you can still add your own parameters or open links on a different site.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = scheme.onTertiaryContainer
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ExpressiveTactileButton(
+                    onClick = onPatch,
+                    filled = true,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = scheme.tertiary,
+                        contentColor = scheme.onTertiary
+                    ),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+                    modifier = Modifier.weight(1.2f)
+                ) {
+                    Text("Patch built-in", fontWeight = FontWeight.Bold, maxLines = 1)
+                }
+                ExpressiveTactileButton(
+                    onClick = onKeep,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = scheme.surfaceContainerLowest,
+                        contentColor = scheme.onSurface
+                    ),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Keep custom", fontWeight = FontWeight.SemiBold, maxLines = 1)
+                }
+            }
         }
     }
 }
