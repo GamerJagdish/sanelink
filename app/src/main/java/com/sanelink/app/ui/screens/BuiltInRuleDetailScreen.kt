@@ -147,14 +147,6 @@ fun BuiltInRuleDetailScreen(
     var isPatchMode by rememberSaveable { mutableStateOf(initialPatchMode) }
     var showResetConfirm by remember { mutableStateOf(false) }
 
-    // Intercept system back press when in patch mode
-    BackHandler {
-        if (isPatchMode) {
-            isPatchMode = false
-        } else {
-            onClose()
-        }
-    }
 
     // Interactive Sample URL State
     val defaultDummy = remember(providerId, rule) { generateDummyUrl(providerId, rule) }
@@ -208,6 +200,21 @@ fun BuiltInRuleDetailScreen(
         )
     }
     val swapInput = parseDomainSwapInput(swapFromText, swapToText)
+
+    // Leaving patch mode without saving (Cancel or system back) discards the edits
+    val discardPatchEdits = {
+        removedRules.clear()
+        userPatch?.removedRules?.let { removedRules.addAll(it) }
+        addedRules.clear()
+        userPatch?.addedRules?.let { addedRules.addAll(it) }
+        swapFromText = userPatch?.frontendSwaps?.firstOrNull()?.from ?: defaultSwapFrom
+        swapToText = userPatch?.frontendSwaps?.firstOrNull()?.to.orEmpty()
+        isPatchMode = false
+    }
+
+    BackHandler {
+        if (isPatchMode) discardPatchEdits() else onClose()
+    }
     val canSavePatch = swapInput.isEmpty || swapInput.isValid
 
     val activePatchParams = remember(baseRules, removedRules.toList(), addedRules.toList()) {
@@ -314,16 +321,7 @@ fun BuiltInRuleDetailScreen(
                         onSavePatch(patch)
                         isPatchMode = false
                     },
-                    onSecondaryClick = {
-                        // Discard uncommitted edits
-                        removedRules.clear()
-                        userPatch?.removedRules?.let { removedRules.addAll(it) }
-                        addedRules.clear()
-                        userPatch?.addedRules?.let { addedRules.addAll(it) }
-                        swapFromText = userPatch?.frontendSwaps?.firstOrNull()?.from ?: defaultSwapFrom
-                        swapToText = userPatch?.frontendSwaps?.firstOrNull()?.to.orEmpty()
-                        isPatchMode = false
-                    }
+                    onSecondaryClick = discardPatchEdits
                 )
             }
         }
