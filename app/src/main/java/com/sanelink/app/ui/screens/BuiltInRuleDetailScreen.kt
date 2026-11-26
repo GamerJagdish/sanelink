@@ -1,5 +1,6 @@
 package com.sanelink.app.ui.screens
 
+import com.sanelink.app.ui.components.PatchedBadge
 import com.sanelink.app.ui.components.SectionLabel
 import com.sanelink.app.ui.theme.rememberReducedMotion
 import com.sanelink.app.ui.theme.titleSwapTransition
@@ -358,37 +359,7 @@ fun BuiltInRuleDetailScreen(
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
 
-                                    if (isUser) {
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.85f))
-                                                .padding(horizontal = 7.dp, vertical = 2.dp)
-                                        ) {
-                                            Text(
-                                                text = "User Patched",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.SemiBold,
-                                                fontSize = 11.sp,
-                                                color = MaterialTheme.colorScheme.onTertiaryContainer
-                                            )
-                                        }
-                                    } else if (isBundled) {
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.85f))
-                                                .padding(horizontal = 7.dp, vertical = 2.dp)
-                                        ) {
-                                            Text(
-                                                text = "Patched",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.SemiBold,
-                                                fontSize = 11.sp,
-                                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                                            )
-                                        }
-                                    }
+                                    PatchedBadge(isUserPatched = isUser, isBundledPatched = isBundled)
                                 }
 
                                 Spacer(modifier = Modifier.height(2.dp))
@@ -504,7 +475,6 @@ fun BuiltInRuleDetailScreen(
                                                     style = MaterialTheme.typography.labelSmall,
                                                     fontFamily = GoogleSansCode,
                                                     fontWeight = FontWeight.SemiBold,
-                                                    fontSize = 11.sp,
                                                     color = MaterialTheme.colorScheme.onErrorContainer
                                                 )
                                             }
@@ -598,7 +568,6 @@ fun BuiltInRuleDetailScreen(
                                         style = MaterialTheme.typography.labelSmall,
                                         fontFamily = GoogleSansCode,
                                         fontWeight = FontWeight.SemiBold,
-                                        fontSize = 11.sp,
                                         color = MaterialTheme.colorScheme.onErrorContainer
                                     )
                                 }
@@ -837,7 +806,6 @@ fun BuiltInRuleDetailScreen(
                                                 style = MaterialTheme.typography.labelSmall,
                                                 fontFamily = GoogleSansCode,
                                                 fontWeight = FontWeight.SemiBold,
-                                                fontSize = 11.sp,
                                                 color = MaterialTheme.colorScheme.onErrorContainer
                                             )
                                         }
@@ -917,7 +885,6 @@ fun BuiltInRuleDetailScreen(
                                             style = MaterialTheme.typography.labelSmall,
                                             fontFamily = GoogleSansCode,
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 11.sp,
                                             color = MaterialTheme.colorScheme.onPrimaryContainer
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
@@ -990,8 +957,7 @@ fun BuiltInRuleDetailScreen(
                                         text = if (isKept) "$param (Kept)" else param,
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             fontFamily = GoogleSansCode,
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = 11.sp
+                                            fontWeight = FontWeight.SemiBold
                                         ),
                                         color = if (isKept) {
                                             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)

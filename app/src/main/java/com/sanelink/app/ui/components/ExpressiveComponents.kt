@@ -1913,3 +1913,43 @@ fun SectionLabel(
         modifier = modifier
     )
 }
+
+/** Small rounded tag used on rule cards ("12 params", "Cleans Path", ...). */
+@Composable
+fun RuleTag(
+    text: String,
+    containerColor: Color,
+    contentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(containerColor)
+            .padding(horizontal = 7.dp, vertical = 2.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = contentColor
+        )
+    }
+}
+
+/** "User Patched" or "Patched" tag for a built-in rule; shows nothing when it isn't patched. */
+@Composable
+fun PatchedBadge(isUserPatched: Boolean, isBundledPatched: Boolean) {
+    when {
+        isUserPatched -> RuleTag(
+            text = "User Patched",
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.85f),
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+        )
+        isBundledPatched -> RuleTag(
+            text = "Patched",
+            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.85f),
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+    }
+}

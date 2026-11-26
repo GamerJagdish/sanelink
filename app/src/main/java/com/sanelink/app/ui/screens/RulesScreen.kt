@@ -1,5 +1,7 @@
 package com.sanelink.app.ui.screens
 
+import com.sanelink.app.ui.components.RuleTag
+import com.sanelink.app.ui.components.PatchedBadge
 import com.sanelink.app.ui.theme.rememberReducedMotion
 import com.sanelink.app.ui.theme.tabSwitchTransition
 import androidx.compose.material3.TextButton
@@ -289,7 +291,6 @@ fun RulesScreen(
                                             text = "Patched ($patchedCount)",
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.SemiBold,
-                                            fontSize = 11.sp,
                                             color = if (showOnlyPatched) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                         )
@@ -662,118 +663,32 @@ private fun BuiltInProviderCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    if (isUserPatched) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.85f))
-                                .padding(horizontal = 7.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "User Patched",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer
-                            )
-                        }
-                    } else if (isBundledPatched) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.85f))
-                                .padding(horizontal = 7.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "Patched",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        }
-                    }
+                    PatchedBadge(isUserPatched = isUserPatched, isBundledPatched = isBundledPatched)
 
+                    // Muted when the provider is switched off
+                    val idleContainer = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
+                    val idleContent = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
                     val ruleCount = rule.rules.size + rule.referralMarketing.size
                     if (ruleCount > 0) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(
-                                    if (isActive) {
-                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
-                                    } else {
-                                        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
-                                    }
-                                )
-                                .padding(horizontal = 7.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "$ruleCount params",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 11.sp,
-                                color = if (isActive) {
-                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
-                                }
-                            )
-                        }
+                        RuleTag(
+                            text = "$ruleCount params",
+                            containerColor = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f) else idleContainer,
+                            contentColor = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer else idleContent
+                        )
                     }
-
                     if (rule.redirections.isNotEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(
-                                    if (isActive) {
-                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
-                                    } else {
-                                        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
-                                    }
-                                )
-                                .padding(horizontal = 7.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "Unwraps Redirect",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 11.sp,
-                                color = if (isActive) {
-                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
-                                }
-                            )
-                        }
+                        RuleTag(
+                            text = "Unwraps Redirect",
+                            containerColor = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f) else idleContainer,
+                            contentColor = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer else idleContent
+                        )
                     }
-
                     if (rule.rawRules.isNotEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(
-                                    if (isActive) {
-                                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
-                                    } else {
-                                        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
-                                    }
-                                )
-                                .padding(horizontal = 7.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "Cleans Path",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 11.sp,
-                                color = if (isActive) {
-                                    MaterialTheme.colorScheme.onSecondaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
-                                }
-                            )
-                        }
+                        RuleTag(
+                            text = "Cleans Path",
+                            containerColor = if (isActive) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f) else idleContainer,
+                            contentColor = if (isActive) MaterialTheme.colorScheme.onSecondaryContainer else idleContent
+                        )
                     }
                 }
             }
@@ -959,7 +874,6 @@ private fun CustomRuleCard(
                                         style = MaterialTheme.typography.labelSmall,
                                         fontFamily = GoogleSansCode,
                                         fontWeight = FontWeight.SemiBold,
-                                        fontSize = 11.sp,
                                         color = if (rule.isEnabled) {
                                             MaterialTheme.colorScheme.onErrorContainer
                                         } else {
