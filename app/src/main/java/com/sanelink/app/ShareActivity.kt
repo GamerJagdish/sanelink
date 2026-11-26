@@ -1,5 +1,6 @@
 package com.sanelink.app
 
+import com.sanelink.app.service.ClipboardCleaner
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -44,10 +45,7 @@ class ShareActivity : ComponentActivity() {
         val result = app.repository.awaitSanitizer().sanitize(sharedText)
         val textToCopy = if (result.wasModified) result.cleanText else sharedText
 
-        // Mark the write as ours so background auto-clean doesn't react to it
-        ClipboardMonitor.guard.recordOwnWrite(textToCopy)
-        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-        cm?.setPrimaryClip(ClipData.newPlainText("SaneLink", textToCopy))
+        ClipboardCleaner.writeOwnClip(this, textToCopy)
 
         if (result.wasModified) app.preferences.recordSanitization(result.removedParameters.size)
         performClickHapticIfEnabled()

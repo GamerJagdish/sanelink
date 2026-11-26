@@ -1,5 +1,6 @@
 package com.sanelink.app
 
+import com.sanelink.app.service.ClipboardCleaner
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -51,9 +52,7 @@ class ProcessTextActivity : ComponentActivity() {
                 setResult(RESULT_OK, Intent().putExtra(Intent.EXTRA_PROCESS_TEXT, result.cleanText))
             }
         } else {
-            ClipboardMonitor.guard.recordOwnWrite(result.cleanText)
-            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-            cm?.setPrimaryClip(ClipData.newPlainText("SaneLink", result.cleanText))
+            ClipboardCleaner.writeOwnClip(this, result.cleanText)
         }
 
         if (result.wasModified) app.preferences.recordSanitization(result.removedParameters.size)

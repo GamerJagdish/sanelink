@@ -1,5 +1,6 @@
 package com.sanelink.app.ui.screens
 
+import com.sanelink.app.service.ClipboardCleaner
 import androidx.compose.runtime.saveable.rememberSaveable
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -90,8 +91,7 @@ fun HomeScreen(
                 onInputChanged = { sandboxInput = it },
                 result = sandboxResult,
                 onCopyClean = { cleanUrl ->
-                    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-                    cm?.setPrimaryClip(ClipData.newPlainText("sanitized_url", cleanUrl))
+                    ClipboardCleaner.writeOwnClip(context, cleanUrl)
                     Toast.makeText(context, "Clean URL copied to clipboard", Toast.LENGTH_SHORT).show()
                 }
             )

@@ -32,6 +32,21 @@ object ClipboardCleaner {
 
     private const val CLIP_LABEL = "SaneLink"
 
+    /**
+     * Puts [text] on the clipboard as SaneLink's own write, so background auto-clean
+     * recognises the change echo and ignores it. Returns false if the write failed.
+     */
+    fun writeOwnClip(context: Context, text: String): Boolean {
+        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return false
+        ClipboardMonitor.guard.recordOwnWrite(text)
+        return try {
+            cm.setPrimaryClip(ClipData.newPlainText(CLIP_LABEL, text))
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     /** Outlives the reader activity, for work after the clipboard has been written. */
     private val effectsScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -80,13 +95,7 @@ object ClipboardCleaner {
         val result = SaneLinkApp.instance.repository.awaitSanitizer().sanitize(text)
         if (!result.wasModified || result.cleanText == text) return Outcome.ALREADY_CLEAN to result
 
-        // Record before writing so the change echo is recognised as ours.
-        guard.recordOwnWrite(result.cleanText)
-        try {
-            cm.setPrimaryClip(ClipData.newPlainText(CLIP_LABEL, result.cleanText))
-        } catch (_: Exception) {
-            return Outcome.NO_ACCESS to null
-        }
+        if (!writeOwnClip(context, result.cleanText)) return Outcome.NO_ACCESS to null
         return Outcome.CLEANED to result
     }
 
