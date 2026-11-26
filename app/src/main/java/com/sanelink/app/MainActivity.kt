@@ -1,14 +1,12 @@
 package com.sanelink.app
 
+import com.sanelink.app.util.performClickHaptic
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -400,7 +398,7 @@ class MainActivity : ComponentActivity() {
 
                             val triggerAppHaptic = {
                                 if (isHapticEnabled) {
-                                    triggerHaptic()
+                                    performClickHaptic()
                                 }
                             }
 
@@ -665,7 +663,7 @@ class MainActivity : ComponentActivity() {
                     app.preferences.recordSanitization(result.removedParameters.size)
 
                     if (app.preferences.hapticFeedbackEnabled.first()) {
-                        triggerHaptic()
+                        performClickHaptic()
                     }
                     if (app.preferences.showToastEnabled.first()) {
                         val count = result.removedParameters.size
@@ -689,24 +687,6 @@ class MainActivity : ComponentActivity() {
 
             moveTaskToBack(true)
             finish()
-        }
-    }
-
-    private fun triggerHaptic() {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
-                vibratorManager?.defaultVibrator?.vibrate(
-                    VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK)
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-                @Suppress("DEPRECATION")
-                vibrator?.vibrate(35)
-            }
-        } catch (_: Exception) {
-            // Ignore if vibration unavailable
         }
     }
 }

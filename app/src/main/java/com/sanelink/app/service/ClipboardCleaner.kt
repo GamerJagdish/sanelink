@@ -1,13 +1,11 @@
 package com.sanelink.app.service
 
+import com.sanelink.app.util.performClickHaptic
 import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import android.widget.Toast
 import com.sanelink.app.SaneLinkApp
 import kotlinx.coroutines.flow.first
@@ -67,7 +65,7 @@ object ClipboardCleaner {
         app.preferences.recordSanitization(result.removedParameters.size)
         ClipboardMonitor.reportCleaned()
 
-        if (app.preferences.hapticFeedbackEnabled.first()) vibrate(context)
+        if (app.preferences.hapticFeedbackEnabled.first()) context.performClickHaptic()
         if (app.preferences.showToastEnabled.first()) {
             val count = result.removedParameters.size
             val msg = if (count > 0) {
@@ -78,24 +76,5 @@ object ClipboardCleaner {
             Toast.makeText(context.applicationContext, msg, Toast.LENGTH_SHORT).show()
         }
         return Outcome.CLEANED
-    }
-
-    private fun vibrate(context: Context) {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val vm = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
-                vm?.defaultVibrator?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                @Suppress("DEPRECATION")
-                val v = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-                v?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
-            } else {
-                @Suppress("DEPRECATION")
-                val v = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-                v?.vibrate(VibrationEffect.createOneShot(30, VibrationEffect.DEFAULT_AMPLITUDE))
-            }
-        } catch (_: Exception) {
-            // Vibration is non-critical
-        }
     }
 }

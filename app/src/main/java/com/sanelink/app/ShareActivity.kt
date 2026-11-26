@@ -1,15 +1,12 @@
 package com.sanelink.app
 
+import com.sanelink.app.util.performClickHaptic
 import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import android.widget.Toast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,28 +45,10 @@ class ShareActivity : Activity() {
                     Toast.makeText(this, "Link is already clean! Copied.", Toast.LENGTH_SHORT).show()
                 }
 
-                triggerHaptic()
+                performClickHaptic()
             }
         }
 
         finish()
-    }
-
-    private fun triggerHaptic() {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
-                vibratorManager?.defaultVibrator?.vibrate(
-                    VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK)
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-                @Suppress("DEPRECATION")
-                vibrator?.vibrate(35)
-            }
-        } catch (_: Exception) {
-            // Ignore if vibration unavailable
-        }
     }
 }

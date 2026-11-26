@@ -1,13 +1,11 @@
 package com.sanelink.app.ui.screens
 
+import com.sanelink.app.util.performClickHaptic
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
@@ -142,7 +140,7 @@ fun SettingsScreen(
                 val onToggleHaptic: (Boolean) -> Unit = { enabled ->
                     scope.launch { app.preferences.setHapticFeedback(enabled) }
                     if (enabled) {
-                        triggerHapticFeedback(context)
+                        context.performClickHaptic()
                     }
                 }
 
@@ -486,23 +484,5 @@ fun SettingsScreen(
             shape = RoundedCornerShape(32.dp),
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
-    }
-}
-
-private fun triggerHapticFeedback(context: Context) {
-    try {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
-            vibratorManager?.defaultVibrator?.vibrate(
-                VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK)
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-            @Suppress("DEPRECATION")
-            vibrator?.vibrate(30)
-        }
-    } catch (_: Exception) {
-        // Non-critical if vibration unavailable
     }
 }
