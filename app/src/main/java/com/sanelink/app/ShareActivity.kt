@@ -1,54 +1,65 @@
 package com.sanelink.app
 
-import com.sanelink.app.util.performClickHaptic
-import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import androidx.activity.ComponentActivity
+import androidx.lifecycle.lifecycleScope
+import com.sanelink.app.service.ClipboardMonitor
+import com.sanelink.app.util.performClickHapticIfEnabled
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-class ShareActivity : Activity() {
+/** Share target: cleans the shared text, copies it to the clipboard and closes. */
+class ShareActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (intent?.action == Intent.ACTION_SEND && intent.type == "text/plain") {
-            val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
-            if (!sharedText.isNullOrBlank()) {
-                val app = SaneLinkApp.instance
-                val sanitizer = app.repository.getSanitizer()
-                val result = sanitizer.sanitize(sharedText)
-
-                val textToCopy = if (result.wasModified) result.cleanText else sharedText
-
-                val cm = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-                val clip = ClipData.newPlainText("sanitized_url", textToCopy)
-                cm?.setPrimaryClip(clip)
-
-                if (result.wasModified) {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        app.preferences.recordSanitization(result.removedParameters.size)
-                    }
-                    val count = result.removedParameters.size
-                    val msg = if (count > 0) {
-                        "Cleaned & copied! (Removed $count tracker${if (count > 1) "s" else ""})"
-                    } else {
-                        "Cleaned & copied to clipboard"
-                    }
-                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this, "Link is already clean! Copied.", Toast.LENGTH_SHORT).show()
-                }
-
-                performClickHaptic()
-            }
+        // Shared text may be rich (Spanned) or typed as text/plain; charset=utf-8
+        val sharedText = intent
+            ?.takeIf { it.action == Intent.ACTION_SEND && it.type?.startsWith("text/") == true }
+            ?.getCharSequenceExtra(Intent.EXTRA_TEXT)
+            ?.toString()
+        if (sharedText.isNullOrBlank()) {
+            finish()
+            return
         }
 
-        finish()
+        lifecycleScope.launch {
+            try {
+                handle(sharedText)
+            } finally {
+                finish()
+            }
+        }
+    }
+
+    private suspend fun handle(sharedText: String) {
+        val app = SaneLinkApp.instance
+        // Wait for the user's custom rules and patches (matters right after a cold start)
+        val result = app.repository.awaitSanitizer().sanitize(sharedText)
+        val textToCopy = if (result.wasModified) result.cleanText else sharedText
+
+        // Mark the write as ours so background auto-clean doesn't react to it
+        ClipboardMonitor.guard.recordOwnWrite(textToCopy)
+        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        cm?.setPrimaryClip(ClipData.newPlainText("SaneLink", textToCopy))
+
+        if (result.wasModified) app.preferences.recordSanitization(result.removedParameters.size)
+        performClickHapticIfEnabled()
+
+        if (app.preferences.showToastEnabled.first()) {
+            val count = result.removedParameters.size
+            val msg = when {
+                !result.wasModified -> "Link is already clean! Copied."
+                count > 0 -> "Cleaned & copied! (Removed $count tracker${if (count > 1) "s" else ""})"
+                else -> "Cleaned & copied to clipboard"
+            }
+            Toast.makeText(applicationContext, msg, Toast.LENGTH_SHORT).show()
+        }
     }
 }
