@@ -53,7 +53,7 @@ object ClipboardCleaner {
         val guard = ClipboardMonitor.guard
         if (!guard.shouldProcess(text)) return Outcome.SKIPPED
 
-        val result = app.repository.getSanitizer().sanitize(text)
+        val result = app.repository.awaitSanitizer().sanitize(text)
         if (!result.wasModified || result.cleanText == text) return Outcome.ALREADY_CLEAN
 
         // Record before writing so the change echo is recognised as ours.
