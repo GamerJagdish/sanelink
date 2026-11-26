@@ -1,5 +1,7 @@
 package com.sanelink.app.ui.screens
 
+import com.sanelink.app.ui.theme.rememberReducedMotion
+import com.sanelink.app.ui.theme.titleSwapTransition
 import com.sanelink.app.ui.components.StringStateListSaver
 import androidx.compose.runtime.saveable.Saver
 import androidx.activity.compose.BackHandler
@@ -132,6 +134,7 @@ fun BuiltInRuleDetailScreen(
     val app = SaneLinkApp.instance
     val scope = rememberCoroutineScope()
     val motionScheme = LocalMotionScheme.current
+    val reducedMotion = rememberReducedMotion()
     val keyboardController = LocalSoftwareKeyboardController.current
 
     val clearUrlsData by app.repository.clearUrlsData.collectAsState()
@@ -249,33 +252,7 @@ fun BuiltInRuleDetailScreen(
                     AnimatedContent(
                         targetState = targetTitle,
                         modifier = Modifier.fillMaxWidth(),
-                        transitionSpec = {
-                            (slideInVertically(
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessMediumLow
-                                ),
-                                initialOffsetY = { -it / 2 }
-                            ) + fadeIn(
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                    stiffness = Spring.StiffnessMediumLow
-                                )
-                            )).togetherWith(
-                                slideOutVertically(
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioNoBouncy,
-                                        stiffness = Spring.StiffnessMediumLow
-                                    ),
-                                    targetOffsetY = { it / 2 }
-                                ) + fadeOut(
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioNoBouncy,
-                                        stiffness = Spring.StiffnessMedium
-                                    )
-                                )
-                            )
-                        },
+                        transitionSpec = { motionScheme.titleSwapTransition(reducedMotion) },
                         label = "builtInTitleTransition"
                     ) { titleText ->
                         AutoFitTitleText(

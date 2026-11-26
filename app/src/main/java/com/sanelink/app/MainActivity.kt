@@ -1,5 +1,7 @@
 package com.sanelink.app
 
+import com.sanelink.app.ui.theme.tabSwitchTransition
+import com.sanelink.app.ui.theme.titleSwapTransition
 import com.sanelink.app.ui.screens.PatchPrefillSaver
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -304,38 +306,7 @@ class MainActivity : ComponentActivity() {
                                                 else -> "Settings"
                                             },
                                             modifier = Modifier.fillMaxWidth(),
-                                            transitionSpec = {
-                                                if (isReducedMotion) {
-                                                    fadeIn(animationSpec = motionScheme.fastEffects)
-                                                        .togetherWith(fadeOut(animationSpec = motionScheme.fastEffects))
-                                                } else {
-                                                    (slideInVertically(
-                                                        animationSpec = spring(
-                                                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                            stiffness = Spring.StiffnessMediumLow
-                                                        ),
-                                                        initialOffsetY = { -it / 2 }
-                                                    ) + fadeIn(
-                                                        animationSpec = spring(
-                                                            dampingRatio = Spring.DampingRatioNoBouncy,
-                                                            stiffness = Spring.StiffnessMediumLow
-                                                        )
-                                                    )).togetherWith(
-                                                        slideOutVertically(
-                                                            animationSpec = spring(
-                                                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                                                stiffness = Spring.StiffnessMediumLow
-                                                            ),
-                                                            targetOffsetY = { it / 2 }
-                                                        ) + fadeOut(
-                                                            animationSpec = spring(
-                                                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                                                stiffness = Spring.StiffnessMedium
-                                                            )
-                                                        )
-                                                    )
-                                                }
-                                            },
+                                            transitionSpec = { motionScheme.titleSwapTransition(isReducedMotion) },
                                             label = "topBarTitleTransition"
                                         ) { titleText ->
                                             AutoFitTitleText(
@@ -446,39 +417,7 @@ class MainActivity : ComponentActivity() {
                                     ) {
                                         AnimatedContent(
                                             targetState = selectedTab,
-                                            transitionSpec = {
-                                                if (isReducedMotion) {
-                                                    fadeIn(animationSpec = motionScheme.fastEffects)
-                                                        .togetherWith(fadeOut(animationSpec = motionScheme.fastEffects))
-                                                } else {
-                                                    val direction = if (targetState > initialState) 1 else -1
-                                                    (slideInHorizontally(
-                                                        animationSpec = spring(
-                                                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                            stiffness = Spring.StiffnessLow
-                                                        ),
-                                                        initialOffsetX = { fullWidth -> direction * (fullWidth / 4) }
-                                                    ) + fadeIn(
-                                                        animationSpec = spring(
-                                                            dampingRatio = Spring.DampingRatioNoBouncy,
-                                                            stiffness = Spring.StiffnessMediumLow
-                                                        )
-                                                    )).togetherWith(
-                                                        slideOutHorizontally(
-                                                            animationSpec = spring(
-                                                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                                                stiffness = Spring.StiffnessMediumLow
-                                                            ),
-                                                            targetOffsetX = { fullWidth -> -direction * (fullWidth / 4) }
-                                                        ) + fadeOut(
-                                                            animationSpec = spring(
-                                                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                                                stiffness = Spring.StiffnessMedium
-                                                            )
-                                                        )
-                                                    )
-                                                }
-                                            },
+                                            transitionSpec = { motionScheme.tabSwitchTransition(if (targetState > initialState) 1 else -1, isReducedMotion) },
                                             label = "tabContentTransition"
                                         ) { tab ->
                                             when (tab) {

@@ -1,5 +1,13 @@
 package com.sanelink.app.ui.theme
 
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.ContentTransform
 import android.provider.Settings
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.SpringSpec
@@ -92,3 +100,25 @@ fun rememberReducedMotion(): Boolean {
         }
     }
 }
+
+/**
+ * Directional horizontal slide + fade for switching between tabs. [direction] is 1 when
+ * moving forward (content enters from the right) and -1 when moving back. Fades only when
+ * reduced motion is on.
+ */
+fun SaneLinkMotionScheme.tabSwitchTransition(direction: Int, reducedMotion: Boolean): ContentTransform =
+    if (reducedMotion) {
+        fadeIn(fastEffects) togetherWith fadeOut(fastEffects)
+    } else {
+        (slideInHorizontally(defaultSpatialSpec()) { width -> direction * (width / 4) } + fadeIn(defaultEffects))
+            .togetherWith(slideOutHorizontally(defaultEffectsSpec()) { width -> -direction * (width / 4) } + fadeOut(fastEffects))
+    }
+
+/** Title swap in a top app bar: new title drops in from above, old one slides down and out. */
+fun SaneLinkMotionScheme.titleSwapTransition(reducedMotion: Boolean): ContentTransform =
+    if (reducedMotion) {
+        fadeIn(fastEffects) togetherWith fadeOut(fastEffects)
+    } else {
+        (slideInVertically(fastSpatialSpec()) { -it / 2 } + fadeIn(defaultEffects))
+            .togetherWith(slideOutVertically(defaultEffectsSpec()) { it / 2 } + fadeOut(fastEffects))
+    }

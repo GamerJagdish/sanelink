@@ -1,5 +1,7 @@
 package com.sanelink.app.ui.screens
 
+import com.sanelink.app.ui.theme.rememberReducedMotion
+import com.sanelink.app.ui.theme.tabSwitchTransition
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -240,36 +242,10 @@ fun RulesScreen(
                     .then(if (hazeState != null) Modifier.hazeSource(hazeState) else Modifier)
             ) {
                 val motionScheme = LocalMotionScheme.current
+                val reducedMotion = rememberReducedMotion()
                 AnimatedContent(
                     targetState = selectedSubTab,
-                    transitionSpec = {
-                        val direction = if (targetState > initialState) 1 else -1
-                        (slideInHorizontally(
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessLow
-                            ),
-                            initialOffsetX = { fullWidth -> direction * (fullWidth / 4) }
-                        ) + fadeIn(
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            )
-                        )).togetherWith(
-                            slideOutHorizontally(
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                    stiffness = Spring.StiffnessMediumLow
-                                ),
-                                targetOffsetX = { fullWidth -> -direction * (fullWidth / 4) }
-                            ) + fadeOut(
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                    stiffness = Spring.StiffnessMedium
-                                )
-                            )
-                        )
-                    },
+                    transitionSpec = { motionScheme.tabSwitchTransition(if (targetState > initialState) 1 else -1, reducedMotion) },
                     label = "rulesSubTabTransition"
                 ) { subTab ->
                     if (subTab == 0) {
