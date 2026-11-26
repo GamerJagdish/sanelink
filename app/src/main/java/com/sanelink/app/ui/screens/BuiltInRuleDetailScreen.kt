@@ -74,6 +74,8 @@ import com.sanelink.app.core.model.ProviderRule
 import com.sanelink.app.core.model.DomainSwap
 import com.sanelink.app.core.model.UserPatch
 import com.sanelink.app.core.sanitizer.DomainSwapper
+import com.sanelink.app.core.sanitizer.UrlSanitizer
+import com.sanelink.app.core.model.ClearUrlsData
 import com.sanelink.app.ui.components.DomainSwapEditor
 import com.sanelink.app.ui.components.parseDomainSwapInput
 import com.sanelink.app.ui.components.AutoFitTitleText
@@ -82,7 +84,6 @@ import com.sanelink.app.ui.components.ExpressiveSwitch
 import com.sanelink.app.ui.theme.GoogleSansCode
 import com.sanelink.app.ui.theme.LocalMotionScheme
 import kotlinx.coroutines.launch
-import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -138,14 +139,16 @@ fun BuiltInRuleDetailScreen(
     val defaultDummy = remember(providerId, rule) { generateDummyUrl(providerId, rule) }
     var testUrlInput by remember(defaultDummy) { mutableStateOf(defaultDummy) }
 
-    val sanitizer = remember { app.repository.getSanitizer() }
+    val sanitizer by app.repository.sanitizer.collectAsState()
     val testResult = remember(testUrlInput, sanitizer) {
         if (testUrlInput.isNotBlank()) sanitizer.sanitizeSingleUrl(testUrlInput) else null
     }
 
     // Patch Customization State
     val userPatch = remember(providerId, userPatchedProviderIds) { app.repository.getUserPatch(providerId) }
-    val baseRules = remember(rule) { (rule.rules + rule.referralMarketing).distinct() }
+    // Edit against the rule without the user's patch, so kept parameters stay listed and can be re-enabled.
+    val unpatchedRule = remember(providerId, clearUrlsData) { app.repository.builtInRule(providerId) ?: rule }
+    val baseRules = remember(unpatchedRule) { (unpatchedRule.rules + unpatchedRule.referralMarketing).distinct() }
     val removedRules = remember(userPatch, rule, prefill) {
         mutableStateListOf<String>().apply {
             userPatch?.removedRules?.let { addAll(it) }
@@ -189,12 +192,18 @@ fun BuiltInRuleDetailScreen(
     val activePatchParams = remember(baseRules, removedRules.toList(), addedRules.toList()) {
         (baseRules.filterNot { removedRules.contains(it) } + addedRules).distinct()
     }
-    val patchSimulatedResult = remember(testUrlInput, activePatchParams, swapInput) {
-        val stripped = simulateSanitization(testUrlInput, activePatchParams)
-        val swapped = if (swapInput.isValid) {
-            DomainSwapper.apply(stripped.first, DomainSwap(swapInput.from!!, swapInput.to!!))
-        } else null
-        Triple(swapped ?: stripped.first, stripped.second, swapped != null)
+    // Preview with the real engine: this provider's rule replaced by the edited one.
+    val patchSimulatedResult = remember(testUrlInput, activePatchParams, swapInput, clearUrlsData, unpatchedRule) {
+        val swaps = if (swapInput.isValid) listOf(DomainSwap(swapInput.from!!, swapInput.to!!)) else emptyList()
+        val edited = unpatchedRule.copy(
+            rules = activePatchParams,
+            referralMarketing = emptyList(),
+            frontendSwaps = swaps + unpatchedRule.frontendSwaps
+        )
+        val preview = UrlSanitizer(ClearUrlsData(clearUrlsData.providers + (providerId to edited)))
+            .sanitizeSingleUrl(testUrlInput)
+        val swapped = swaps.isNotEmpty() && preview.cleanText.contains("://${swapInput.to}", ignoreCase = true)
+        Triple(preview.cleanText, preview.removedParameters, swapped)
     }
 
     Scaffold(
@@ -1157,43 +1166,6 @@ fun BuiltInRuleDetailScreen(
             shape = RoundedCornerShape(24.dp)
         )
     }
-}
-
-private fun simulateSanitization(urlStr: String, activeParams: List<String>): Pair<String, List<String>> {
-    val uri = try { URI(urlStr) } catch (_: Exception) { return urlStr to emptyList() }
-    val rawQuery = uri.rawQuery ?: return urlStr to emptyList()
-
-    val removed = mutableListOf<String>()
-    val keptParams = mutableListOf<String>()
-
-    val regexes = activeParams.mapNotNull {
-        try { Regex("^$it$", RegexOption.IGNORE_CASE) } catch (_: Exception) { null }
-    }
-
-    val pairs = rawQuery.split("&")
-    for (pair in pairs) {
-        if (pair.isBlank()) continue
-        val idx = pair.indexOf("=")
-        val key = if (idx > 0) pair.substring(0, idx) else pair
-
-        val matchesRule = regexes.any { regex -> regex.matches(key) } ||
-                activeParams.any { it.equals(key, ignoreCase = true) }
-        if (matchesRule) {
-            removed.add(key)
-        } else {
-            keptParams.add(pair)
-        }
-    }
-
-    val newQuery = if (keptParams.isEmpty()) "" else "?" + keptParams.joinToString("&")
-    val scheme = uri.scheme ?: "https"
-    val host = uri.host ?: ""
-    val port = if (uri.port != -1 && uri.port != 80 && uri.port != 443) ":${uri.port}" else ""
-    val path = uri.rawPath ?: ""
-    val fragment = if (uri.rawFragment != null) "#${uri.rawFragment}" else ""
-
-    val newUrl = "$scheme://$host$port$path$newQuery$fragment"
-    return newUrl to removed
 }
 
 fun generateDummyUrl(name: String, rule: ProviderRule): String {

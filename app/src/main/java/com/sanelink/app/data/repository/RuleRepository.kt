@@ -65,6 +65,10 @@ class RuleRepository(
 
     private val ready = MutableStateFlow(false)
 
+    /** Base + bundled patches, without the user's own patches (what a patch is edited against). */
+    @Volatile
+    private var builtInRules: Map<String, ProviderRule> = emptyMap()
+
     init {
         scope.launch {
             val (base, bundled) = loadBundledFiles()
@@ -81,6 +85,7 @@ class RuleRepository(
                     _disabledProviderIds.value = disabled
                     _bundledPatchedProviderIds.value = merged.bundledPatched
                     _userPatchedProviderIds.value = merged.userPatched
+                    builtInRules = merged.builtIn
                     _clearUrlsData.value = merged.data
                     _sanitizer.value = UrlSanitizer(merged.data, customs, disabled)
                     ready.value = true
@@ -118,6 +123,7 @@ class RuleRepository(
 
     private class MergedRules(
         val data: ClearUrlsData,
+        val builtIn: Map<String, ProviderRule>,
         val bundledPatched: Set<String>,
         val userPatched: Set<String>
     )
@@ -170,6 +176,8 @@ class RuleRepository(
             }
         }
 
+        val builtIn = merged.toMap()
+
         // Layer 2: user patches
         for ((id, patch) in userPatches) {
             if (!patch.isEnabled) continue
@@ -185,10 +193,13 @@ class RuleRepository(
             userPatched.add(id)
         }
 
-        return MergedRules(ClearUrlsData(providers = merged), bundledPatched, userPatched)
+        return MergedRules(ClearUrlsData(providers = merged), builtIn, bundledPatched, userPatched)
     }
 
     fun getUserPatch(providerId: String): UserPatch? = _userPatches.value[providerId]
+
+    /** The provider's rule with bundled patches applied but without the user's patch. */
+    fun builtInRule(providerId: String): ProviderRule? = builtInRules[providerId]
 
     suspend fun saveUserPatch(patch: UserPatch) {
         preferences.saveUserPatch(patch)
