@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import rikka.shizuku.Shizuku
+import java.util.concurrent.Executors
 
 /**
  * App-side bridge to Shizuku.
@@ -31,6 +32,7 @@ object ShizukuManager {
     private const val TAG = "SaneLinkShizuku"
     private const val PERMISSION_REQUEST_CODE = 4127
     private const val MIN_SHIZUKU_VERSION = 11
+    private const val WATCH_RESTART_DELAY_MS = 3_000L
 
     enum class State {
         /** Shizuku app isn't installed. */
@@ -72,9 +74,38 @@ object ShizukuManager {
             .version(BuildConfig.VERSION_CODE)
     }
 
+    /** Binder calls into the shell process can block (pm grant spawns a process); keep them off the main thread. */
+    private val ipcExecutor = Executors.newSingleThreadExecutor { Thread(it, "SaneLink-shizuku-ipc") }
+
     private val signalCallback = object : IClipboardSignalCallback.Stub() {
         override fun onClipboardChanged() {
             mainHandler.post { onSignal?.invoke() }
+        }
+
+        override fun onWatchStopped() {
+            // The shell log reader died: report it and try to start it again shortly.
+            mainHandler.post {
+                if (shellService == null || !wantWatching) return@post
+                setActive(false, State.READY)
+                mainHandler.postDelayed({ startWatchInBackground() }, WATCH_RESTART_DELAY_MS)
+            }
+        }
+    }
+
+    private fun startWatchInBackground() {
+        val service = shellService ?: return
+        val ctx = appContext ?: return
+        ipcExecutor.execute {
+            val started = try {
+                wantWatching && service.startClipboardWatch(ctx.packageName, signalCallback)
+            } catch (e: Exception) {
+                Log.w(TAG, "Unable to start Shizuku clipboard watch", e)
+                false
+            }
+            mainHandler.post {
+                if (shellService !== service) return@post
+                setActive(started, if (started) State.ACTIVE else State.READY)
+            }
         }
     }
 
@@ -87,19 +118,16 @@ object ShizukuManager {
             }
             shellService = service
             val ctx = appContext ?: return
-            try {
-                // Keep the ADB fallback alive in case Shizuku stops later.
-                if (ctx.checkSelfPermission(Manifest.permission.READ_LOGS) != PackageManager.PERMISSION_GRANTED) {
-                    service.grantPermission(ctx.packageName, Manifest.permission.READ_LOGS)
+            ipcExecutor.execute {
+                try {
+                    // Keep the ADB fallback alive in case Shizuku stops later.
+                    if (ctx.checkSelfPermission(Manifest.permission.READ_LOGS) != PackageManager.PERMISSION_GRANTED) {
+                        service.grantPermission(ctx.packageName, Manifest.permission.READ_LOGS)
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Unable to grant READ_LOGS through Shizuku", e)
                 }
-                if (wantWatching && service.startClipboardWatch(ctx.packageName, signalCallback)) {
-                    setActive(true, State.ACTIVE)
-                } else {
-                    setActive(false, State.READY)
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Shell service call failed", e)
-                setActive(false, State.UNAVAILABLE)
+                mainHandler.post { startWatchInBackground() }
             }
         }
 

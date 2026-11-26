@@ -82,9 +82,18 @@ class ShellService : IShellService.Stub() {
             } catch (_: Exception) {
                 // Stream closed
             } finally {
-                synchronized(lock) {
+                val unexpected = synchronized(lock) {
                     if (logcat === process) {
                         logcat = null
+                        true
+                    } else {
+                        false // stopped on purpose
+                    }
+                }
+                if (unexpected) {
+                    try {
+                        cb.onWatchStopped()
+                    } catch (_: RemoteException) {
                     }
                 }
             }
