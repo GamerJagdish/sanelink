@@ -1,5 +1,7 @@
 package com.sanelink.app.ui.screens
 
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -107,6 +109,37 @@ fun RulesScreen(
 ) {
     val app = SaneLinkApp.instance
     val scope = rememberCoroutineScope()
+
+    // Deleting a custom rule can't be undone, so ask first
+    var ruleToDelete by remember { mutableStateOf<CustomRule?>(null) }
+    ruleToDelete?.let { pending ->
+        AlertDialog(
+            onDismissRequest = { ruleToDelete = null },
+            icon = {
+                Icon(
+                    painter = painterResource(R.drawable.ic_delete),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = { Text("Delete \"${pending.name}\"?", fontWeight = FontWeight.Bold) },
+            text = { Text("This custom rule will be removed. This can't be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        scope.launch { app.repository.deleteCustomRule(pending.id) }
+                        ruleToDelete = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("Delete", fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { ruleToDelete = null }) { Text("Cancel") }
+            },
+            shape = RoundedCornerShape(32.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        )
+    }
     val hazeState = LocalHazeState.current
 
     val clearUrlsData by app.repository.clearUrlsData.collectAsState()
@@ -540,9 +573,7 @@ fun RulesScreen(
                                             scope.launch { app.repository.toggleCustomRule(rule.id, enable) }
                                         },
                                         onEdit = { onEditCustomRule(rule) },
-                                        onDelete = {
-                                            scope.launch { app.repository.deleteCustomRule(rule.id) }
-                                        },
+                                        onDelete = { ruleToDelete = rule },
                                         modifier = Modifier.animateItem(
                                             fadeInSpec = itemFadeSpec,
                                             placementSpec = itemPlacementSpec,
