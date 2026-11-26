@@ -1,5 +1,6 @@
 package com.sanelink.app.ui.screens
 
+import com.sanelink.app.ui.components.SectionLabel
 import com.sanelink.app.ui.theme.rememberReducedMotion
 import com.sanelink.app.ui.theme.titleSwapTransition
 import com.sanelink.app.ui.components.StringStateListSaver
@@ -425,13 +426,7 @@ fun BuiltInRuleDetailScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(
-                                    text = "LIVE CONVERSION PREVIEW",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    letterSpacing = 1.sp
-                                )
+                                SectionLabel("LIVE CONVERSION PREVIEW")
 
                                 IconButton(
                                     onClick = { testUrlInput = defaultDummy },
@@ -466,13 +461,7 @@ fun BuiltInRuleDetailScreen(
                             Spacer(modifier = Modifier.height(12.dp))
 
                             if (testResult != null && testResult.wasModified) {
-                                Text(
-                                    text = "CONVERTED RESULT",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    letterSpacing = 1.sp
-                                )
+                                SectionLabel("CONVERTED RESULT")
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Box(
                                     modifier = Modifier
@@ -538,13 +527,7 @@ fun BuiltInRuleDetailScreen(
                     Spacer(modifier = Modifier.height(18.dp))
 
                     // Matched URL Pattern
-                    Text(
-                        text = "MATCHED URL PATTERN",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        letterSpacing = 1.sp
-                    )
+                    SectionLabel("MATCHED URL PATTERN")
                     Spacer(modifier = Modifier.height(6.dp))
                     Box(
                         modifier = Modifier
@@ -572,13 +555,7 @@ fun BuiltInRuleDetailScreen(
                     // Frontend swaps (from user patch)
                     if (rule.frontendSwaps.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(18.dp))
-                        Text(
-                            text = "OPENS ON A DIFFERENT SITE",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.tertiary,
-                            letterSpacing = 1.sp
-                        )
+                        SectionLabel("OPENS ON A DIFFERENT SITE", color = MaterialTheme.colorScheme.tertiary)
                         Spacer(modifier = Modifier.height(6.dp))
                         rule.frontendSwaps.forEach { swap ->
                             Box(
@@ -603,13 +580,7 @@ fun BuiltInRuleDetailScreen(
                     val allRules = rule.rules + rule.referralMarketing
                     if (allRules.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(18.dp))
-                        Text(
-                            text = "TRACKING PARAMETERS STRIPPED (${allRules.size})",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.error,
-                            letterSpacing = 1.sp
-                        )
+                        SectionLabel("TRACKING PARAMETERS STRIPPED (${allRules.size})", color = MaterialTheme.colorScheme.error)
                         Spacer(modifier = Modifier.height(8.dp))
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -638,13 +609,7 @@ fun BuiltInRuleDetailScreen(
                     // Raw Rules (Path Cleanup)
                     if (rule.rawRules.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(18.dp))
-                        Text(
-                            text = "PATH CLEANUP (RAW RULES)",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.secondary,
-                            letterSpacing = 1.sp
-                        )
+                        SectionLabel("PATH CLEANUP (RAW RULES)", color = MaterialTheme.colorScheme.secondary)
                         Spacer(modifier = Modifier.height(6.dp))
                         rule.rawRules.forEach { raw ->
                             Box(
@@ -673,13 +638,7 @@ fun BuiltInRuleDetailScreen(
                     // Redirection Unwraps
                     if (rule.redirections.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(18.dp))
-                        Text(
-                            text = "REDIRECTION UNWRAPPING",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            letterSpacing = 1.sp
-                        )
+                        SectionLabel("REDIRECTION UNWRAPPING")
                         Spacer(modifier = Modifier.height(6.dp))
                         rule.redirections.forEach { redir ->
                             Box(
@@ -708,13 +667,7 @@ fun BuiltInRuleDetailScreen(
                     // Exceptions
                     if (rule.exceptions.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(18.dp))
-                        Text(
-                            text = "EXCEPTIONS (IGNORED URLS)",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.outline,
-                            letterSpacing = 1.sp
-                        )
+                        SectionLabel("EXCEPTIONS (IGNORED URLS)", color = MaterialTheme.colorScheme.outline)
                         Spacer(modifier = Modifier.height(6.dp))
                         rule.exceptions.forEach { exc ->
                             Box(
@@ -820,13 +773,7 @@ fun BuiltInRuleDetailScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = "LIVE PATCH PREVIEW",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                letterSpacing = 1.sp
-                            )
+                            SectionLabel("LIVE PATCH PREVIEW")
 
                             Spacer(modifier = Modifier.height(8.dp))
 
@@ -848,13 +795,7 @@ fun BuiltInRuleDetailScreen(
                             Spacer(modifier = Modifier.height(10.dp))
 
                             if (patchSimulatedResult.second.isNotEmpty() || patchSimulatedResult.third) {
-                                Text(
-                                    text = if (patchSimulatedResult.third) "RESULT WITH YOUR PATCH" else "STRIPPED BY YOUR PATCH",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    letterSpacing = 1.sp
-                                )
+                                SectionLabel(if (patchSimulatedResult.third) "RESULT WITH YOUR PATCH" else "STRIPPED BY YOUR PATCH")
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Box(
                                     modifier = Modifier
@@ -918,13 +859,7 @@ fun BuiltInRuleDetailScreen(
                     Spacer(modifier = Modifier.height(18.dp))
 
                     // Add Custom Parameters to Strip
-                    Text(
-                        text = "ADD CUSTOM PARAMETERS TO STRIP",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        letterSpacing = 1.sp
-                    )
+                    SectionLabel("ADD CUSTOM PARAMETERS TO STRIP")
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -1000,13 +935,7 @@ fun BuiltInRuleDetailScreen(
 
                     // Frontend swap
                     Spacer(modifier = Modifier.height(18.dp))
-                    Text(
-                        text = "OPEN ON A DIFFERENT SITE (OPTIONAL)",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        letterSpacing = 1.sp
-                    )
+                    SectionLabel("OPEN ON A DIFFERENT SITE (OPTIONAL)")
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Send ${formatProviderName(providerId)} links to an alternative frontend. Type plain website names; tracking is still removed by this rule.",
@@ -1024,13 +953,7 @@ fun BuiltInRuleDetailScreen(
                     // Built-in parameters toggle list
                     if (baseRules.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(18.dp))
-                        Text(
-                            text = "BUILT-IN PARAMETERS (TAP TO KEEP)",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.secondary,
-                            letterSpacing = 1.sp
-                        )
+                        SectionLabel("BUILT-IN PARAMETERS (TAP TO KEEP)", color = MaterialTheme.colorScheme.secondary)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Parameters marked as (Kept) will NOT be stripped for this site.",

@@ -585,13 +585,7 @@ fun ExpressiveSandboxCard(
                 Column(modifier = Modifier.padding(top = 16.dp)) {
                     // Removed parameters badges
                     if (result != null && result.removedParameters.isNotEmpty()) {
-                        Text(
-                            text = "STRIPPED TRACKERS",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.error,
-                            letterSpacing = 1.sp
-                        )
+                        SectionLabel("STRIPPED TRACKERS", color = MaterialTheme.colorScheme.error)
 
                         Spacer(modifier = Modifier.height(6.dp))
 
@@ -623,13 +617,7 @@ fun ExpressiveSandboxCard(
 
                     // Clean URL result box
                     if (result != null) {
-                        Text(
-                            text = "SANITIZED URL",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            letterSpacing = 1.sp
-                        )
+                        SectionLabel("SANITIZED URL")
 
                         Spacer(modifier = Modifier.height(6.dp))
 
@@ -1907,4 +1895,21 @@ fun ExpressiveSingleActionButtonBar(
             }
         }
     }
+}
+
+/** Small bold all-caps-style section heading used above groups of content. */
+@Composable
+fun SectionLabel(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.Bold,
+        color = color,
+        letterSpacing = 1.sp,
+        modifier = modifier
+    )
 }

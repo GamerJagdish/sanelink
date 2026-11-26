@@ -1,5 +1,6 @@
 package com.sanelink.app.ui.screens
 
+import com.sanelink.app.ui.components.SectionLabel
 import com.sanelink.app.core.sanitizer.CustomRuleValidator
 import com.sanelink.app.ui.components.StringStateListSaver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -498,17 +499,6 @@ private fun findMatchingProvider(
                     (providerRegex != null && providerRegex.containsMatchIn(regexText))
                 ))
     }?.key
-}
-
-@Composable
-private fun SectionLabel(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.primary,
-        letterSpacing = 1.sp
-    )
 }
 
 @Composable
