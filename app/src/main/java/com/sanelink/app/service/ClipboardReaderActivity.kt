@@ -47,7 +47,10 @@ class ClipboardReaderActivity : ComponentActivity() {
         handler.removeCallbacks(giveUp)
         lifecycleScope.launch {
             try {
-                ClipboardCleaner.cleanPrimaryClip(this@ClipboardReaderActivity)
+                ClipboardCleaner.cleanPrimaryClip(
+                    this@ClipboardReaderActivity,
+                    manual = intent.getBooleanExtra(EXTRA_MANUAL, false)
+                )
             } finally {
                 close()
             }
@@ -77,9 +80,13 @@ class ClipboardReaderActivity : ComponentActivity() {
 
     companion object {
         private const val FOCUS_TIMEOUT_MS = 1_500L
+        private const val EXTRA_MANUAL = "com.sanelink.app.extra.MANUAL_CLEAN"
 
-        fun createIntent(context: Context): Intent =
-            Intent(context, ClipboardReaderActivity::class.java).addFlags(
+        /** @param manual true for an explicit user request (Quick Settings tile). */
+        fun createIntent(context: Context, manual: Boolean = false): Intent =
+            Intent(context, ClipboardReaderActivity::class.java)
+                .putExtra(EXTRA_MANUAL, manual)
+                .addFlags(
                 Intent.FLAG_ACTIVITY_NEW_TASK or
                     Intent.FLAG_ACTIVITY_NO_ANIMATION or
                     Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS or
