@@ -2,15 +2,11 @@ package com.sanelink.app
 
 import com.sanelink.app.util.trackersLabel
 import com.sanelink.app.service.ClipboardCleaner
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
-import com.sanelink.app.service.ClipboardMonitor
 import com.sanelink.app.util.performClickHapticIfEnabled
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
