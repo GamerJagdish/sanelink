@@ -1,5 +1,7 @@
 package com.sanelink.app.ui.components
 
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -395,7 +397,10 @@ private fun StatCard(
             .graphicsLayer {
                 scaleX = pressScale
                 scaleY = pressScale
-            },
+            }
+            // The press animation needs onClick, but this is a statistic, not a button:
+            // TalkBack should read "label: value" instead of announcing a clickable card.
+            .clearAndSetSemantics { contentDescription = "$label: $value" },
         shape = RoundedCornerShape(cornerRadius),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
