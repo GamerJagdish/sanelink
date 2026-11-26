@@ -40,8 +40,8 @@ class ClipboardLoopGuard(
      */
     @Synchronized
     fun tryAcquireFocusedRead(): Boolean {
+        if (isInEchoWindow()) return false
         val now = clock()
-        if (now - lastWriteAt < echoWindowMillis) return false
         if (now - lastLaunchAt < launchThrottleMillis) return false
         lastLaunchAt = now
         return true
