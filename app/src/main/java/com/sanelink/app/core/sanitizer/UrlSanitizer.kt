@@ -3,64 +3,74 @@ package com.sanelink.app.core.sanitizer
 import com.sanelink.app.core.model.ClearUrlsData
 import com.sanelink.app.core.model.CustomRule
 import com.sanelink.app.core.model.DomainSwap
-import com.sanelink.app.core.model.ProviderRule
 import com.sanelink.app.core.model.SanitizerResult
-import java.net.URI
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
 
+/**
+ * Cleans URLs using, in priority order: user custom rules, then the built-in ClearURLs
+ * providers (with bundled and user patches already merged in by the repository).
+ *
+ * Follows ClearURLs semantics: a provider (its redirections, raw rules and parameter rules)
+ * only applies when its `urlPattern` matches and none of its `exceptions` do. The catch-all
+ * `globalRules` provider obeys its own exceptions too.
+ *
+ * All regexes are compiled once per instance; build a new instance when rules change.
+ */
 class UrlSanitizer(
-    private var clearUrlsData: ClearUrlsData = ClearUrlsData(),
-    private var customRules: List<CustomRule> = emptyList(),
-    private val disabledProviderIds: Set<String> = emptySet()
+    clearUrlsData: ClearUrlsData = ClearUrlsData(),
+    customRules: List<CustomRule> = emptyList(),
+    disabledProviderIds: Set<String> = emptySet()
 ) {
 
-    // Regex to detect HTTP/HTTPS URLs even within mixed text
-    private val urlPattern: Pattern = Pattern.compile(
-        "https?://[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+",
-        Pattern.CASE_INSENSITIVE
+    private class CompiledProvider(
+        val name: String,
+        val pattern: Regex,
+        val exceptions: List<Regex>,
+        val redirections: List<Regex>,
+        val rawRules: List<Regex>,
+        val paramRules: List<Regex>,
+        val frontendSwaps: List<DomainSwap>
+    ) {
+        fun appliesTo(url: String): Boolean =
+            pattern.containsMatchIn(url) && exceptions.none { it.containsMatchIn(url) }
+    }
+
+    private class CompiledCustom(
+        val rule: CustomRule,
+        val pattern: Regex,
+        val rewrite: Regex?
     )
 
-    // Precompiled regex caches for fast matching
-    private var compiledProviderPatterns: Map<String, Regex> = emptyMap()
-    private var compiledCustomPatterns: List<Pair<CustomRule, Regex>> = emptyList()
+    private val providers: List<CompiledProvider>
+    private val globalProvider: CompiledProvider?
+    private val customs: List<CompiledCustom>
 
     init {
-        rebuildCompiledPatterns()
-    }
-
-    fun updateRules(
-        newClearUrlsData: ClearUrlsData,
-        newCustomRules: List<CustomRule> = customRules
-    ) {
-        this.clearUrlsData = newClearUrlsData
-        this.customRules = newCustomRules
-        rebuildCompiledPatterns()
-    }
-
-    fun updateCustomRules(newCustomRules: List<CustomRule>) {
-        this.customRules = newCustomRules
-        rebuildCompiledPatterns()
-    }
-
-    private fun rebuildCompiledPatterns() {
-        compiledProviderPatterns = clearUrlsData.providers.mapNotNull { (name, rule) ->
-            if (rule.urlPattern.isNotBlank()) {
-                try {
-                    name to Regex(rule.urlPattern, RegexOption.IGNORE_CASE)
-                } catch (_: Exception) {
-                    null
-                }
-            } else null
-        }.toMap()
-
-        compiledCustomPatterns = customRules.filter { it.isEnabled }.mapNotNull { custom ->
-            try {
-                custom to Regex(custom.urlPattern, RegexOption.IGNORE_CASE)
-            } catch (_: Exception) {
-                null
+        val compiled = clearUrlsData.providers
+            .filterKeys { it !in disabledProviderIds }
+            .mapNotNull { (name, rule) ->
+                val pattern = compileOrNull(rule.urlPattern) ?: return@mapNotNull null
+                CompiledProvider(
+                    name = name,
+                    pattern = pattern,
+                    exceptions = rule.exceptions.mapNotNull(::compileOrNull),
+                    redirections = rule.redirections.mapNotNull(::compileOrNull),
+                    rawRules = rule.rawRules.mapNotNull(::compileOrNull),
+                    paramRules = (rule.rules + rule.referralMarketing).mapNotNull { compileOrNull("^(?:$it)$") },
+                    frontendSwaps = rule.frontendSwaps
+                )
             }
+        globalProvider = compiled.firstOrNull { it.name == GLOBAL_RULES }
+        providers = compiled.filter { it.name != GLOBAL_RULES }
+
+        customs = customRules.filter { it.isEnabled }.mapNotNull { custom ->
+            val pattern = compileOrNull(custom.urlPattern) ?: return@mapNotNull null
+            val rewrite = if (!custom.rewritePattern.isNullOrBlank() && !custom.rewriteReplacement.isNullOrBlank()) {
+                compileOrNull(custom.rewritePattern)
+            } else null
+            CompiledCustom(custom, pattern, rewrite)
         }
     }
 
@@ -72,35 +82,37 @@ class UrlSanitizer(
             return SanitizerResult(originalText = input, cleanText = input)
         }
 
-        val matcher = urlPattern.matcher(input)
-        val sb = StringBuffer()
+        val matcher = URL_IN_TEXT.matcher(input)
+        val out = StringBuilder(input.length)
         val allRemovedParams = mutableListOf<String>()
         val matchedSites = mutableListOf<String>()
         var modified = false
         var unwrappedUrl: String? = null
+        var copiedUpTo = 0
 
         while (matcher.find()) {
-            val originalUrl = matcher.group()
-            val singleResult = sanitizeSingleUrl(originalUrl)
+            val start = matcher.start()
+            val end = start + trimmedUrlLength(matcher.group())
+            val originalUrl = input.substring(start, end)
+            val result = sanitizeSingleUrl(originalUrl)
 
-            if (singleResult.wasModified) {
+            out.append(input, copiedUpTo, start)
+            if (result.wasModified) {
                 modified = true
-                allRemovedParams.addAll(singleResult.removedParameters)
-                matchedSites.addAll(singleResult.matchedSites)
-                if (singleResult.unwrappedUrl != null) {
-                    unwrappedUrl = singleResult.unwrappedUrl
-                }
-                matcher.appendReplacement(sb, MatcherQuote(singleResult.cleanText))
+                allRemovedParams.addAll(result.removedParameters)
+                matchedSites.addAll(result.matchedSites)
+                if (result.unwrappedUrl != null) unwrappedUrl = result.unwrappedUrl
+                out.append(result.cleanText)
             } else {
-                matcher.appendReplacement(sb, MatcherQuote(originalUrl))
+                out.append(originalUrl)
             }
+            copiedUpTo = end
         }
-        matcher.appendTail(sb)
+        out.append(input, copiedUpTo, input.length)
 
-        val cleanResultText = sb.toString()
         return SanitizerResult(
             originalText = input,
-            cleanText = cleanResultText,
+            cleanText = out.toString(),
             removedParameters = allRemovedParams.distinct(),
             wasModified = modified,
             matchedSites = matchedSites.distinct(),
@@ -111,283 +123,208 @@ class UrlSanitizer(
     /**
      * Sanitizes a single standalone URL string.
      */
-    fun sanitizeSingleUrl(rawUrl: String): SanitizerResult {
-        var currentUrl = rawUrl.trim()
+    fun sanitizeSingleUrl(rawUrl: String): SanitizerResult = sanitizeSingleUrl(rawUrl, depth = 0)
+
+    private fun sanitizeSingleUrl(rawUrl: String, depth: Int): SanitizerResult {
+        val original = rawUrl.trim()
+        var currentUrl = original
         val removedParams = mutableListOf<String>()
         val matchedSites = mutableListOf<String>()
-        var unwrappedTarget: String? = null
-        var wasModified = false
 
-        // 1. Check for Redirections in ClearURLs providers
-        for ((providerName, providerRule) in clearUrlsData.providers) {
-            if (disabledProviderIds.contains(providerName)) continue
-            for (redirectionRegexStr in providerRule.redirections) {
-                try {
-                    val redirectRegex = Regex(redirectionRegexStr, RegexOption.IGNORE_CASE)
-                    val match = redirectRegex.find(currentUrl)
-                    if (match != null && match.groupValues.size > 1) {
-                        val extracted = safeUrlDecode(match.groupValues[1])
-                        if (extracted.startsWith("http://") || extracted.startsWith("https://")) {
-                            unwrappedTarget = extracted
-                            val nested = sanitizeSingleUrl(extracted)
-                            return SanitizerResult(
-                                originalText = rawUrl,
-                                cleanText = nested.cleanText,
-                                removedParameters = (listOf("redirect:$providerName") + nested.removedParameters).distinct(),
-                                wasModified = true,
-                                matchedSites = (listOf(providerName) + nested.matchedSites).distinct(),
-                                unwrappedUrl = nested.cleanText
-                            )
-                        }
-                    }
-                } catch (_: Exception) {}
-            }
-        }
-
-        // 2. Apply Custom Rules (Priority 1: if custom rule matches, only apply that and stop,
-        //    unless the rule asks to keep built-in cleaning)
-        var customMatched = false
+        // 1. Custom rules (priority 1). Unless a rule keeps built-in cleaning, it is the only
+        //    thing applied to matching URLs.
         var stopAfterCustom = false
-        // Domain swaps are applied last, so built-in rules still match the original domain.
+        // Domain swaps run last, so built-in rules still match the original domain.
         val customSwaps = mutableListOf<DomainSwap>()
-        for ((custom, regex) in compiledCustomPatterns) {
-            if (regex.containsMatchIn(currentUrl)) {
-                customMatched = true
-                if (!custom.keepBuiltInCleaning) stopAfterCustom = true
-                matchedSites.add(custom.name)
-                if (!custom.matchDomain.isNullOrBlank() && !custom.swapToDomain.isNullOrBlank()) {
-                    customSwaps.add(DomainSwap(custom.matchDomain, custom.swapToDomain))
-                }
-
-                // Query stripping from custom rule
-                if (custom.stripParameters.isNotEmpty()) {
-                    val strippedUrlResult = stripCustomQueryParams(currentUrl, custom.stripParameters)
-                    if (strippedUrlResult.first != currentUrl) {
-                        currentUrl = strippedUrlResult.first
-                        removedParams.addAll(strippedUrlResult.second)
-                        wasModified = true
-                    }
-                }
-
-                // Frontend / URL rewriting
-                if (!custom.rewritePattern.isNullOrBlank() && !custom.rewriteReplacement.isNullOrBlank()) {
-                    try {
-                        val rewriteRegex = Regex(custom.rewritePattern, RegexOption.IGNORE_CASE)
-                        if (rewriteRegex.containsMatchIn(currentUrl)) {
-                            val rewritten = currentUrl.replace(rewriteRegex, custom.rewriteReplacement)
-                            if (rewritten != currentUrl) {
-                                currentUrl = rewritten
-                                wasModified = true
-                            }
-                        }
-                    } catch (_: Exception) {}
+        for (custom in customs) {
+            if (!custom.pattern.containsMatchIn(currentUrl)) continue
+            val rule = custom.rule
+            if (!rule.keepBuiltInCleaning) stopAfterCustom = true
+            matchedSites.add(rule.name)
+            if (!rule.matchDomain.isNullOrBlank() && !rule.swapToDomain.isNullOrBlank()) {
+                customSwaps.add(DomainSwap(rule.matchDomain, rule.swapToDomain))
+            }
+            if (rule.stripParameters.isNotEmpty()) {
+                val names = rule.stripParameters.map { it.trim().lowercase() }.toSet()
+                val (stripped, removed) = QueryStripper.strip(currentUrl) { it.lowercase() in names }
+                currentUrl = stripped
+                removedParams.addAll(removed)
+            }
+            val rewrite = custom.rewrite
+            if (rewrite != null && rewrite.containsMatchIn(currentUrl)) {
+                try {
+                    currentUrl = currentUrl.replace(rewrite, rule.rewriteReplacement!!)
+                } catch (_: Exception) {
+                    // Invalid group reference in the replacement: leave the URL as is
                 }
             }
         }
 
-        // If a priority 1 custom rule matched, stop here and do not evaluate built-in providers
-        if (customMatched && stopAfterCustom) {
-            DomainSwapper.applyFirst(currentUrl, customSwaps)?.let {
-                currentUrl = it
-                wasModified = true
+        if (!stopAfterCustom) {
+            // 2. Built-in providers that apply to this URL (pattern matches, no exception)
+            val matching = providers.filter { it.appliesTo(currentUrl) }
+
+            // 3. Redirect wrappers: unwrap and clean the target instead
+            if (depth < MAX_REDIRECT_DEPTH) {
+                for (provider in matching) {
+                    val target = provider.redirections.firstNotNullOfOrNull { extractRedirectTarget(it, currentUrl) }
+                        ?: continue
+                    val nested = sanitizeSingleUrl(target, depth + 1)
+                    val finalUrl = DomainSwapper.applyFirst(nested.cleanText, customSwaps) ?: nested.cleanText
+                    return SanitizerResult(
+                        originalText = rawUrl,
+                        cleanText = finalUrl,
+                        removedParameters = (removedParams + "redirect:${provider.name}" + nested.removedParameters).distinct(),
+                        wasModified = true,
+                        matchedSites = (matchedSites + provider.name + nested.matchedSites).distinct(),
+                        unwrappedUrl = finalUrl
+                    )
+                }
             }
-            return SanitizerResult(
-                originalText = rawUrl,
-                cleanText = currentUrl,
-                removedParameters = removedParams.distinct(),
-                wasModified = wasModified,
-                matchedSites = matchedSites.distinct(),
-                unwrappedUrl = unwrappedTarget
-            )
-        }
 
-        // 3. Apply ClearURLs Matching Providers
-        val matchingProviders = mutableListOf<Pair<String, ProviderRule>>()
-        for ((name, regex) in compiledProviderPatterns) {
-            if (disabledProviderIds.contains(name)) continue
-            val rule = clearUrlsData.providers[name] ?: continue
-
-            // Check exceptions: if matched, skip this provider
-            var hasException = false
-            for (exc in rule.exceptions) {
-                try {
-                    if (Regex(exc, RegexOption.IGNORE_CASE).containsMatchIn(currentUrl)) {
-                        hasException = true
-                        break
+            // 4. Raw rules (path cleanup, e.g. Amazon /ref=...)
+            for (provider in matching) {
+                for (raw in provider.rawRules) {
+                    val cleaned = currentUrl.replace(raw, "")
+                    if (cleaned != currentUrl) {
+                        currentUrl = cleaned
+                        matchedSites.add(provider.name)
                     }
-                } catch (_: Exception) {}
+                }
             }
-            if (hasException) continue
 
-            if (regex.containsMatchIn(currentUrl)) {
-                matchingProviders.add(name to rule)
+            // 5. Query parameters: global rules (unless excepted) + matching providers
+            val paramRules = buildList {
+                globalProvider?.takeIf { it.appliesTo(currentUrl) }?.let { addAll(it.paramRules) }
+                for (provider in matching) {
+                    if (provider.paramRules.isNotEmpty()) matchedSites.add(provider.name)
+                    addAll(provider.paramRules)
+                }
             }
-        }
-
-        // Apply rawRules from matching providers (e.g. Amazon /ref=...)
-        for ((name, rule) in matchingProviders) {
-            for (raw in rule.rawRules) {
-                try {
-                    val rawRegex = Regex(raw, RegexOption.IGNORE_CASE)
-                    if (rawRegex.containsMatchIn(currentUrl)) {
-                        val cleaned = currentUrl.replace(rawRegex, "")
-                        if (cleaned != currentUrl) {
-                            currentUrl = cleaned
-                            wasModified = true
-                            matchedSites.add(name)
-                        }
-                    }
-                } catch (_: Exception) {}
+            if (paramRules.isNotEmpty()) {
+                val (stripped, removed) = QueryStripper.strip(currentUrl) { key -> paramRules.any { it.matches(key) } }
+                currentUrl = stripped
+                removedParams.addAll(removed)
             }
-        }
 
-        // Gather all query parameter rules from globalRules + matching providers
-        val paramRulesToStrip = mutableListOf<Regex>()
-        val globalRule = clearUrlsData.providers["globalRules"]
-        if (globalRule != null && !disabledProviderIds.contains("globalRules")) {
-            for (r in (globalRule.rules + globalRule.referralMarketing)) {
-                try {
-                    paramRulesToStrip.add(Regex("^($r)$", RegexOption.IGNORE_CASE))
-                } catch (_: Exception) {}
+            // 6. Frontend swaps: custom rules first, then built-in patches
+            val providerSwaps = matching.flatMap { it.frontendSwaps }
+            val swapped = DomainSwapper.applyFirst(currentUrl, customSwaps)
+                ?: DomainSwapper.applyFirst(currentUrl, providerSwaps)
+            if (swapped != null) {
+                currentUrl = swapped
+                matchedSites.addAll(matching.filter { it.frontendSwaps.isNotEmpty() }.map { it.name })
             }
-        }
-
-        for ((name, rule) in matchingProviders) {
-            if (name == "globalRules") continue
-            val allRules = rule.rules + rule.referralMarketing
-            if (allRules.isNotEmpty()) {
-                matchedSites.add(name)
-            }
-            for (r in allRules) {
-                try {
-                    paramRulesToStrip.add(Regex("^($r)$", RegexOption.IGNORE_CASE))
-                } catch (_: Exception) {}
-            }
-        }
-
-        // 4. Strip matching query parameters
-        if (paramRulesToStrip.isNotEmpty()) {
-            val strippedResult = stripQueryParamsWithRegex(currentUrl, paramRulesToStrip)
-            if (strippedResult.first != currentUrl) {
-                currentUrl = strippedResult.first
-                removedParams.addAll(strippedResult.second)
-                wasModified = true
-            }
-        }
-
-        // 5. Frontend domain swaps: custom rules first, then built-in patches
-        val providerSwaps = matchingProviders.flatMap { it.second.frontendSwaps }
-        val swapped = DomainSwapper.applyFirst(currentUrl, customSwaps)
-            ?: DomainSwapper.applyFirst(currentUrl, providerSwaps)
-        if (swapped != null) {
-            currentUrl = swapped
-            matchedSites.addAll(matchingProviders.filter { it.second.frontendSwaps.isNotEmpty() }.map { it.first })
-        }
-
-        if (currentUrl != rawUrl.trim()) {
-            wasModified = true
+        } else {
+            DomainSwapper.applyFirst(currentUrl, customSwaps)?.let { currentUrl = it }
         }
 
         return SanitizerResult(
             originalText = rawUrl,
             cleanText = currentUrl,
             removedParameters = removedParams.distinct(),
-            wasModified = wasModified,
+            wasModified = currentUrl != original,
             matchedSites = matchedSites.distinct(),
-            unwrappedUrl = unwrappedTarget
+            unwrappedUrl = null
         )
     }
 
-    private fun stripQueryParamsWithRegex(
-        urlStr: String,
-        patterns: List<Regex>
-    ): Pair<String, List<String>> {
-        val uri = try { URI(urlStr) } catch (_: Exception) { return urlStr to emptyList() }
-        val rawQuery = uri.rawQuery ?: return urlStr to emptyList()
+    /**
+     * Returns the absolute http(s) URL captured by [redirect]'s first group, or null.
+     * Handles percent-encoded targets, upper-case schemes and scheme-less captures such as
+     * Google AMP's `/amp/s/example.com/article`.
+     */
+    private fun extractRedirectTarget(redirect: Regex, url: String): String? {
+        val match = redirect.find(url) ?: return null
+        val captured = match.groups[1]?.value?.takeIf { it.isNotBlank() } ?: return null
+        var target = safeUrlDecode(captured).trim()
+        // Decoding turns '+' into spaces; a space can never be part of a working URL.
+        target = target.replace(" ", "%20")
+        when {
+            HTTP_SCHEME.containsMatchIn(target) -> Unit
+            target.startsWith("//") -> target = "https:$target"
+            BARE_HOST.containsMatchIn(target) -> target = "https://$target"
+            else -> return null
+        }
+        return target
+    }
 
+    private fun safeUrlDecode(value: String): String = try {
+        URLDecoder.decode(value, StandardCharsets.UTF_8.name())
+    } catch (_: Exception) {
+        value
+    }
+
+    companion object {
+        private const val GLOBAL_RULES = "globalRules"
+        private const val MAX_REDIRECT_DEPTH = 5
+
+        // Detects http(s) URLs inside arbitrary text (trailing punctuation trimmed separately)
+        private val URL_IN_TEXT: Pattern = Pattern.compile(
+            "https?://[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+",
+            Pattern.CASE_INSENSITIVE
+        )
+        private val HTTP_SCHEME = Regex("^https?://", RegexOption.IGNORE_CASE)
+        private val BARE_HOST = Regex("^[a-z0-9-]+(?:\\.[a-z0-9-]+)+(?:[:/?#]|$)", RegexOption.IGNORE_CASE)
+
+        private fun compileOrNull(pattern: String?): Regex? {
+            if (pattern.isNullOrBlank()) return null
+            return try {
+                Regex(pattern, RegexOption.IGNORE_CASE)
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+        /**
+         * Length of [match] without sentence punctuation that follows a URL in prose:
+         * trailing `.,;:!?'"` and closing brackets that have no opening partner in the URL.
+         */
+        internal fun trimmedUrlLength(match: String): Int {
+            var end = match.length
+            while (end > 0) {
+                val c = match[end - 1]
+                val candidate = match.substring(0, end)
+                val drop = when (c) {
+                    '.', ',', ';', ':', '!', '?', '\'', '"' -> true
+                    ')' -> candidate.count { it == ')' } > candidate.count { it == '(' }
+                    ']' -> candidate.count { it == ']' } > candidate.count { it == '[' }
+                    else -> false
+                }
+                if (!drop) break
+                end--
+            }
+            return end
+        }
+    }
+}
+
+/**
+ * Removes query parameters by plain string handling, so URLs that `java.net.URI` rejects
+ * (braces, pipes, stray `%`) are still cleaned and everything else, including credentials,
+ * ports and the fragment, is kept byte-for-byte.
+ */
+internal object QueryStripper {
+
+    /** Returns the URL without parameters whose (raw) name matches [shouldRemove], and the removed names. */
+    fun strip(url: String, shouldRemove: (String) -> Boolean): Pair<String, List<String>> {
+        val hashIdx = url.indexOf('#')
+        val base = if (hashIdx >= 0) url.substring(0, hashIdx) else url
+        val fragment = if (hashIdx >= 0) url.substring(hashIdx) else ""
+        val queryIdx = base.indexOf('?')
+        if (queryIdx < 0) return url to emptyList()
+
+        val prefix = base.substring(0, queryIdx)
         val removed = mutableListOf<String>()
-        val keptParams = mutableListOf<String>()
-
-        val pairs = rawQuery.split("&")
-        for (pair in pairs) {
-            if (pair.isBlank()) continue
-            val idx = pair.indexOf("=")
-            val key = if (idx > 0) pair.substring(0, idx) else pair
-
-            val matchesRule = patterns.any { regex -> regex.matches(key) }
-            if (matchesRule) {
-                removed.add(key)
-            } else {
-                keptParams.add(pair)
-            }
+        val kept = mutableListOf<String>()
+        for (pair in base.substring(queryIdx + 1).split('&')) {
+            if (pair.isEmpty()) continue
+            val key = pair.substringBefore('=')
+            if (key.isNotEmpty() && shouldRemove(key)) removed.add(key) else kept.add(pair)
         }
+        if (removed.isEmpty()) return url to emptyList()
 
-        if (removed.isEmpty()) return urlStr to emptyList()
-
-        val newQuery = if (keptParams.isEmpty()) "" else "?" + keptParams.joinToString("&")
-        val scheme = uri.scheme ?: "https"
-        val host = uri.host ?: ""
-        val port = if (uri.port != -1 && uri.port != 80 && uri.port != 443) ":${uri.port}" else ""
-        val path = uri.rawPath ?: ""
-        val fragment = if (uri.rawFragment != null) "#${uri.rawFragment}" else ""
-
-        val newUrl = "$scheme://$host$port$path$newQuery$fragment"
-        return newUrl to removed
-    }
-
-    private fun stripCustomQueryParams(
-        urlStr: String,
-        paramsToStrip: List<String>
-    ): Pair<String, List<String>> {
-        val uri = try { URI(urlStr) } catch (_: Exception) { return urlStr to emptyList() }
-        val rawQuery = uri.rawQuery ?: return urlStr to emptyList()
-
-        val removed = mutableListOf<String>()
-        val keptParams = mutableListOf<String>()
-        val lowerToStrip = paramsToStrip.map { it.trim().lowercase() }.toSet()
-
-        val pairs = rawQuery.split("&")
-        for (pair in pairs) {
-            if (pair.isBlank()) continue
-            val idx = pair.indexOf("=")
-            val key = if (idx > 0) pair.substring(0, idx) else pair
-            if (lowerToStrip.contains(key.lowercase())) {
-                removed.add(key)
-            } else {
-                keptParams.add(pair)
-            }
-        }
-
-        if (removed.isEmpty()) return urlStr to emptyList()
-
-        val newQuery = if (keptParams.isEmpty()) "" else "?" + keptParams.joinToString("&")
-        val scheme = uri.scheme ?: "https"
-        val host = uri.host ?: ""
-        val port = if (uri.port != -1 && uri.port != 80 && uri.port != 443) ":${uri.port}" else ""
-        val path = uri.rawPath ?: ""
-        val fragment = if (uri.rawFragment != null) "#${uri.rawFragment}" else ""
-
-        val newUrl = "$scheme://$host$port$path$newQuery$fragment"
-        return newUrl to removed
-    }
-
-    private fun safeUrlDecode(value: String): String {
-        return try {
-            URLDecoder.decode(value, StandardCharsets.UTF_8.name())
-        } catch (_: Exception) {
-            value
-        }
-    }
-
-    private fun MatcherQuote(s: String): String {
-        val sb = StringBuilder()
-        for (i in 0 until s.length) {
-            val c = s[i]
-            if (c == '\\' || c == '$') {
-                sb.append('\\')
-            }
-            sb.append(c)
-        }
-        return sb.toString()
+        val query = if (kept.isEmpty()) "" else "?" + kept.joinToString("&")
+        return prefix + query + fragment to removed
     }
 }
