@@ -578,6 +578,59 @@ fun RulesScreen(
     }
 }
 
+/**
+ * Card shell shared by built-in and custom rule cards: press squash and corner morph, and
+ * muted colours when the rule is switched off. [content] receives the title colour.
+ */
+@Composable
+private fun RuleCardSurface(
+    isActive: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable (titleColor: Color) -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val motionScheme = LocalMotionScheme.current
+
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.98f else 1f,
+        animationSpec = motionScheme.fastSpatial,
+        label = "ruleCardPressScale"
+    )
+    val cornerRadius by animateDpAsState(
+        targetValue = if (isPressed) 16.dp else 22.dp,
+        animationSpec = motionScheme.fastSpatialSpec(),
+        label = "ruleCardCornerRadius"
+    )
+    val containerColor by animateColorAsState(
+        targetValue = if (isActive) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+        animationSpec = motionScheme.defaultColorEffects,
+        label = "ruleCardContainerColor"
+    )
+    val titleColor by animateColorAsState(
+        targetValue = if (isActive) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+        animationSpec = motionScheme.fastColorEffects,
+        label = "ruleCardTitleColor"
+    )
+
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(cornerRadius),
+        color = containerColor,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (isActive) 0.35f else 0.2f)),
+        interactionSource = interactionSource,
+        modifier = modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
+    ) {
+        content(titleColor)
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun BuiltInProviderCard(
@@ -590,58 +643,7 @@ private fun BuiltInProviderCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val motionScheme = LocalMotionScheme.current
-
-    val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.98f else 1f,
-        animationSpec = motionScheme.fastSpatial,
-        label = "providerPressScale"
-    )
-
-    val cornerRadius by animateDpAsState(
-        targetValue = if (isPressed) 16.dp else 22.dp,
-        animationSpec = motionScheme.fastSpatialSpec(),
-        label = "providerCornerRadius"
-    )
-
-    val containerColor by animateColorAsState(
-        targetValue = if (isActive) {
-            MaterialTheme.colorScheme.surfaceContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerLow
-        },
-        animationSpec = motionScheme.defaultColorEffects,
-        label = "providerContainerColor"
-    )
-
-    val titleColor by animateColorAsState(
-        targetValue = if (isActive) {
-            MaterialTheme.colorScheme.onSurface
-        } else {
-            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-        },
-        animationSpec = motionScheme.fastColorEffects,
-        label = "providerTitleColor"
-    )
-
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(cornerRadius),
-        color = containerColor,
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (isActive) 0.35f else 0.2f)
-        ),
-        interactionSource = interactionSource,
-        modifier = modifier
-            .fillMaxWidth()
-            .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
-            }
-    ) {
+    RuleCardSurface(isActive = isActive, onClick = onClick, modifier = modifier) { titleColor ->
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -720,58 +722,7 @@ private fun CustomRuleCard(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val motionScheme = LocalMotionScheme.current
-
-    val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.98f else 1f,
-        animationSpec = motionScheme.fastSpatial,
-        label = "customRulePressScale"
-    )
-
-    val cornerRadius by animateDpAsState(
-        targetValue = if (isPressed) 16.dp else 22.dp,
-        animationSpec = motionScheme.fastSpatialSpec(),
-        label = "customRuleCornerRadius"
-    )
-
-    val containerColor by animateColorAsState(
-        targetValue = if (rule.isEnabled) {
-            MaterialTheme.colorScheme.surfaceContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerLow
-        },
-        animationSpec = motionScheme.defaultColorEffects,
-        label = "customRuleContainerColor"
-    )
-
-    val titleColor by animateColorAsState(
-        targetValue = if (rule.isEnabled) {
-            MaterialTheme.colorScheme.onSurface
-        } else {
-            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-        },
-        animationSpec = motionScheme.fastColorEffects,
-        label = "customRuleTitleColor"
-    )
-
-    Surface(
-        onClick = onEdit,
-        shape = RoundedCornerShape(cornerRadius),
-        color = containerColor,
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (rule.isEnabled) 0.35f else 0.2f)
-        ),
-        interactionSource = interactionSource,
-        modifier = modifier
-            .fillMaxWidth()
-            .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
-            }
-    ) {
+    RuleCardSurface(isActive = rule.isEnabled, onClick = onEdit, modifier = modifier) { titleColor ->
         Column(modifier = Modifier.padding(18.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
