@@ -183,11 +183,9 @@ class RuleRepository(
             if (!patch.isEnabled) continue
             val current = merged[id] ?: continue
             merged[id] = current.copy(
-                urlPattern = patch.customUrlPattern?.takeIf { it.isNotBlank() } ?: current.urlPattern,
                 rules = (current.rules + patch.addedRules).filterNot { it in patch.removedRules }.distinct(),
                 // "Kept" parameters can come from either list; the patch editor shows both.
                 referralMarketing = current.referralMarketing.filterNot { it in patch.removedRules },
-                exceptions = (current.exceptions + patch.customExceptions).distinct(),
                 frontendSwaps = (patch.frontendSwaps + current.frontendSwaps).distinct()
             )
             userPatched.add(id)

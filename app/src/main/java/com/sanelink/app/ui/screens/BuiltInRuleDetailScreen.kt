@@ -309,14 +309,11 @@ fun BuiltInRuleDetailScreen(
                             isEnabled = true,
                             addedRules = addedRules.toList(),
                             removedRules = removedRules.toList(),
-                            customUrlPattern = userPatch?.customUrlPattern,
-                            customExceptions = userPatch?.customExceptions.orEmpty(),
                             frontendSwaps = if (swapInput.isValid) {
                                 listOf(DomainSwap(swapInput.from!!, swapInput.to!!))
                             } else {
                                 emptyList()
-                            },
-                            updatedAt = System.currentTimeMillis()
+                            }
                         )
                         onSavePatch(patch)
                         isPatchMode = false

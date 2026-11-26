@@ -71,11 +71,8 @@ data class UserPatch(
     val isEnabled: Boolean = true,
     val addedRules: List<String> = emptyList(),
     val removedRules: List<String> = emptyList(),
-    val customUrlPattern: String? = null,
-    val customExceptions: List<String> = emptyList(),
     /** Open this site's links on another domain after trackers are stripped. */
-    val frontendSwaps: List<DomainSwap> = emptyList(),
-    val updatedAt: Long = System.currentTimeMillis()
+    val frontendSwaps: List<DomainSwap> = emptyList()
 )
 
 @Serializable
@@ -86,7 +83,6 @@ data class CustomRule(
     val stripParameters: List<String> = emptyList(),
     val rewritePattern: String? = null,
     val rewriteReplacement: String? = null,
-    val unwrapParam: String? = null,
     val isEnabled: Boolean = true,
     /**
      * Simple mode: the plain domain this rule applies to ("reddit.com"). When set, [urlPattern]
