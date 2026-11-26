@@ -1,5 +1,8 @@
 package com.sanelink.app.data.preferences
 
+import com.sanelink.app.core.history.RecentLinks
+import com.sanelink.app.core.history.RecentLink
+import androidx.datastore.preferences.core.intPreferencesKey
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -32,6 +35,8 @@ class AppPreferences(private val context: Context) {
         val KEY_USER_PATCHES = stringPreferencesKey("user_patches_json")
         val KEY_TOTAL_CLEANED = longPreferencesKey("total_links_cleaned")
         val KEY_TOTAL_TRACKERS = longPreferencesKey("total_trackers_removed")
+        val KEY_RECENT_LINKS = stringPreferencesKey("recent_links_json")
+        val KEY_HISTORY_LIMIT = intPreferencesKey("recent_links_limit")
     }
 
     // Custom rules and user patches are stored as JSON strings. Unreadable JSON counts as empty.
@@ -48,6 +53,19 @@ class AppPreferences(private val context: Context) {
             val rules = decodeCustomRules(prefs[KEY_CUSTOM_RULES]).toMutableList()
             change(rules)
             prefs[KEY_CUSTOM_RULES] = json.encodeToString(rules)
+        }
+    }
+
+    private fun decodeRecentLinks(raw: String?): List<RecentLink> =
+        if (raw.isNullOrBlank()) emptyList()
+        else runCatching { json.decodeFromString<List<RecentLink>>(raw) }.getOrDefault(emptyList())
+
+    private suspend fun editRecentLinks(change: (List<RecentLink>, Int) -> List<RecentLink>) {
+        context.dataStore.edit { prefs ->
+            val limit = prefs[KEY_HISTORY_LIMIT] ?: RecentLinks.DEFAULT_LIMIT
+            val updated = change(decodeRecentLinks(prefs[KEY_RECENT_LINKS]), limit)
+            if (updated.isEmpty()) prefs.remove(KEY_RECENT_LINKS)
+            else prefs[KEY_RECENT_LINKS] = json.encodeToString(updated)
         }
     }
 
@@ -81,6 +99,16 @@ class AppPreferences(private val context: Context) {
 
     val userPatches: Flow<Map<String, UserPatch>> = context.dataStore.data.map { prefs ->
         decodeUserPatches(prefs[KEY_USER_PATCHES])
+    }
+
+    /** Recently cleaned links, newest first. Stored only on this device. */
+    val recentLinks: Flow<List<RecentLink>> = context.dataStore.data.map { prefs ->
+        decodeRecentLinks(prefs[KEY_RECENT_LINKS])
+    }
+
+    /** How many recent links to keep: [RecentLinks.OFF], a number, or [RecentLinks.UNLIMITED]. */
+    val historyLimit: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[KEY_HISTORY_LIMIT] ?: RecentLinks.DEFAULT_LIMIT
     }
 
     val stats: Flow<SanitizationStats> = context.dataStore.data.map { prefs ->
@@ -155,5 +183,25 @@ class AppPreferences(private val context: Context) {
 
     suspend fun deleteUserPatch(providerId: String) = editUserPatches { patches ->
         patches.remove(providerId)
+    }
+
+    suspend fun addRecentLink(entry: RecentLink) = editRecentLinks { links, limit ->
+        RecentLinks.add(links, entry, limit)
+    }
+
+    suspend fun deleteRecentLink(id: String) = editRecentLinks { links, _ ->
+        links.filterNot { it.id == id }
+    }
+
+    suspend fun clearRecentLinks() = editRecentLinks { _, _ -> emptyList() }
+
+    /** Changes how many links are kept; lowering it (or turning it off) trims the log right away. */
+    suspend fun setHistoryLimit(limit: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_HISTORY_LIMIT] = limit
+            val trimmed = RecentLinks.trim(decodeRecentLinks(prefs[KEY_RECENT_LINKS]), limit)
+            if (trimmed.isEmpty()) prefs.remove(KEY_RECENT_LINKS)
+            else prefs[KEY_RECENT_LINKS] = json.encodeToString(trimmed)
+        }
     }
 }

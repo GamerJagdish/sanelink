@@ -1,5 +1,7 @@
 package com.sanelink.app.service
 
+import com.sanelink.app.core.history.RecentLink
+import com.sanelink.app.core.history.CleanSource
 import com.sanelink.app.util.trackersLabel
 import android.content.ClipData
 import android.content.ClipDescription
@@ -48,6 +50,25 @@ object ClipboardCleaner {
         }
     }
 
+    /**
+     * Counts a cleaned link in the stats and adds it to the recent links log (if enabled).
+     * Shared by every entry point that cleans a link.
+     */
+    suspend fun recordCleaned(original: String, result: SanitizerResult, source: CleanSource) {
+        val prefs = SaneLinkApp.instance.preferences
+        prefs.recordSanitization(result.removedParameters.size)
+        prefs.addRecentLink(
+            RecentLink(
+                original = original,
+                clean = result.cleanText,
+                removed = result.removedParameters,
+                source = source
+            )
+        )
+    }
+
+    private class Attempt(val outcome: Outcome, val original: String? = null, val result: SanitizerResult? = null)
+
     /** Outlives the reader activity, for work after the clipboard has been written. */
     private val effectsScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -61,49 +82,51 @@ object ClipboardCleaner {
         val appContext = context.applicationContext
         if (!manual && !app.preferences.autoSanitizeEnabled.first()) return Outcome.SKIPPED
 
-        val outcome = readCleanAndWrite(context, manual)
-        if (outcome.first == Outcome.CLEANED || manual) {
-            effectsScope.launch { afterClean(appContext, outcome.first, outcome.second, manual) }
+        val attempt = readCleanAndWrite(context, manual)
+        if (attempt.outcome == Outcome.CLEANED || manual) {
+            effectsScope.launch { afterClean(appContext, attempt, manual) }
         }
-        return outcome.first
+        return attempt.outcome
     }
 
-    private suspend fun readCleanAndWrite(context: Context, manual: Boolean): Pair<Outcome, SanitizerResult?> {
+    private suspend fun readCleanAndWrite(context: Context, manual: Boolean): Attempt {
         val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-            ?: return Outcome.NO_ACCESS to null
+            ?: return Attempt(Outcome.NO_ACCESS)
         // Returns null on Android 10+ when we are not allowed to read.
         val clip = try {
             cm.primaryClip
         } catch (_: SecurityException) {
             null
-        } ?: return Outcome.NO_ACCESS to null
-        if (clip.itemCount == 0) return Outcome.SKIPPED to null
+        } ?: return Attempt(Outcome.NO_ACCESS)
+        if (clip.itemCount == 0) return Attempt(Outcome.SKIPPED)
 
         // Never touch content the source app flagged as sensitive (passwords, OTPs).
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             clip.description?.extras?.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE) == true
         ) {
-            return Outcome.SKIPPED to null
+            return Attempt(Outcome.SKIPPED)
         }
 
         // coerceToText also covers apps that copy a link as a URI item instead of text
         val text = clip.getItemAt(0)?.coerceToText(context)?.toString()
-        if (text.isNullOrBlank()) return Outcome.SKIPPED to null
+        if (text.isNullOrBlank()) return Attempt(Outcome.SKIPPED)
 
         val guard = ClipboardMonitor.guard
-        if (!guard.shouldProcess(text) && !manual) return Outcome.SKIPPED to null
+        if (!guard.shouldProcess(text) && !manual) return Attempt(Outcome.SKIPPED)
 
         val result = SaneLinkApp.instance.repository.awaitSanitizer().sanitize(text)
-        if (!result.wasModified || result.cleanText == text) return Outcome.ALREADY_CLEAN to result
+        if (!result.wasModified || result.cleanText == text) return Attempt(Outcome.ALREADY_CLEAN, text, result)
 
-        if (!writeOwnClip(context, result.cleanText)) return Outcome.NO_ACCESS to null
-        return Outcome.CLEANED to result
+        if (!writeOwnClip(context, result.cleanText)) return Attempt(Outcome.NO_ACCESS)
+        return Attempt(Outcome.CLEANED, text, result)
     }
 
-    private suspend fun afterClean(context: Context, outcome: Outcome, result: SanitizerResult?, manual: Boolean) {
+    private suspend fun afterClean(context: Context, attempt: Attempt, manual: Boolean) {
         val prefs = SaneLinkApp.instance.preferences
-        if (outcome == Outcome.CLEANED && result != null) {
-            prefs.recordSanitization(result.removedParameters.size)
+        val outcome = attempt.outcome
+        val result = attempt.result
+        if (outcome == Outcome.CLEANED && result != null && attempt.original != null) {
+            recordCleaned(attempt.original, result, if (manual) CleanSource.TILE else CleanSource.AUTO)
             context.performClickHapticIfEnabled()
         }
         if (!prefs.showToastEnabled.first()) return

@@ -1,5 +1,6 @@
 package com.sanelink.app
 
+import com.sanelink.app.core.history.CleanSource
 import com.sanelink.app.util.trackersLabel
 import com.sanelink.app.service.ClipboardCleaner
 import android.content.Intent
@@ -52,7 +53,7 @@ class ProcessTextActivity : ComponentActivity() {
             ClipboardCleaner.writeOwnClip(this, result.cleanText)
         }
 
-        if (result.wasModified) app.preferences.recordSanitization(result.removedParameters.size)
+        if (result.wasModified) ClipboardCleaner.recordCleaned(selectedText, result, CleanSource.TEXT_SELECTION)
         performClickHapticIfEnabled()
 
         if (app.preferences.showToastEnabled.first()) {

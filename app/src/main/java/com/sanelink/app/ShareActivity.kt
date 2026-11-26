@@ -1,5 +1,6 @@
 package com.sanelink.app
 
+import com.sanelink.app.core.history.CleanSource
 import com.sanelink.app.util.trackersLabel
 import com.sanelink.app.service.ClipboardCleaner
 import android.content.Intent
@@ -44,7 +45,7 @@ class ShareActivity : ComponentActivity() {
 
         ClipboardCleaner.writeOwnClip(this, textToCopy)
 
-        if (result.wasModified) app.preferences.recordSanitization(result.removedParameters.size)
+        if (result.wasModified) ClipboardCleaner.recordCleaned(sharedText, result, CleanSource.SHARE)
         performClickHapticIfEnabled()
 
         if (app.preferences.showToastEnabled.first()) {
