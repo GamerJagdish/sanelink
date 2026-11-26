@@ -158,8 +158,8 @@ fun DomainSwapEditor(
 
             AnimatedVisibility(
                 visible = suggestions.isNotEmpty(),
-                enter = expandVertically(spring(motionScheme.defaultSpatial.dampingRatio, motionScheme.defaultSpatial.stiffness)) + fadeIn(motionScheme.fastEffects),
-                exit = shrinkVertically(spring(motionScheme.defaultSpatial.dampingRatio, motionScheme.defaultSpatial.stiffness)) + fadeOut(motionScheme.fastEffects)
+                enter = expandVertically(motionScheme.defaultSpatialSpec()) + fadeIn(motionScheme.fastEffects),
+                exit = shrinkVertically(motionScheme.defaultSpatialSpec()) + fadeOut(motionScheme.fastEffects)
             ) {
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -175,8 +175,8 @@ fun DomainSwapEditor(
             // Plain-language preview: example.com/path → new.com/path
             AnimatedVisibility(
                 visible = parsed.isValid,
-                enter = expandVertically(spring(motionScheme.defaultSpatial.dampingRatio, motionScheme.defaultSpatial.stiffness)) + fadeIn(motionScheme.fastEffects),
-                exit = shrinkVertically(spring(motionScheme.defaultSpatial.dampingRatio, motionScheme.defaultSpatial.stiffness)) + fadeOut(motionScheme.fastEffects)
+                enter = expandVertically(motionScheme.defaultSpatialSpec()) + fadeIn(motionScheme.fastEffects),
+                exit = shrinkVertically(motionScheme.defaultSpatialSpec()) + fadeOut(motionScheme.fastEffects)
             ) {
                 Text(
                     text = "${parsed.from}/… → ${parsed.to}/…\nThe rest of the link stays the same. Trackers are removed first.",

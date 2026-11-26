@@ -257,10 +257,7 @@ fun HeroProtectionCard(
 
     val cornerRadius by animateDpAsState(
         targetValue = targetRadius,
-        animationSpec = spring(
-            dampingRatio = motionScheme.defaultSpatial.dampingRatio,
-            stiffness = motionScheme.defaultSpatial.stiffness
-        ),
+        animationSpec = motionScheme.defaultSpatialSpec(),
         label = "heroCornerRadius"
     )
 
@@ -384,10 +381,7 @@ private fun StatCard(
 
     val cornerRadius by animateDpAsState(
         targetValue = if (isPressed) 14.dp else 24.dp,
-        animationSpec = spring(
-            dampingRatio = motionScheme.fastSpatial.dampingRatio,
-            stiffness = motionScheme.fastSpatial.stiffness
-        ),
+        animationSpec = motionScheme.fastSpatialSpec(),
         label = "statCardCornerRadius"
     )
 
@@ -431,10 +425,7 @@ private fun StatCard(
             AnimatedContent(
                 targetState = value,
                 transitionSpec = {
-                    val offsetSpec = spring<androidx.compose.ui.unit.IntOffset>(
-                        dampingRatio = motionScheme.fastSpatial.dampingRatio,
-                        stiffness = motionScheme.fastSpatial.stiffness
-                    )
+                    val offsetSpec = motionScheme.fastSpatialSpec<androidx.compose.ui.unit.IntOffset>()
                     if (targetState > initialState) {
                         (slideInVertically(animationSpec = offsetSpec) { -it } + fadeIn(animationSpec = motionScheme.fastEffects))
                             .togetherWith(slideOutVertically(animationSpec = offsetSpec) { it } + fadeOut(animationSpec = motionScheme.fastEffects))
@@ -585,16 +576,10 @@ fun ExpressiveSandboxCard(
             AnimatedVisibility(
                 visible = result != null && result.wasModified,
                 enter = expandVertically(
-                    animationSpec = spring(
-                        dampingRatio = motionScheme.defaultSpatial.dampingRatio,
-                        stiffness = motionScheme.defaultSpatial.stiffness
-                    )
+                    animationSpec = motionScheme.defaultSpatialSpec()
                 ) + fadeIn(animationSpec = motionScheme.fastEffects),
                 exit = shrinkVertically(
-                    animationSpec = spring(
-                        dampingRatio = motionScheme.defaultSpatial.dampingRatio,
-                        stiffness = motionScheme.defaultSpatial.stiffness
-                    )
+                    animationSpec = motionScheme.defaultSpatialSpec()
                 ) + fadeOut(animationSpec = motionScheme.fastEffects)
             ) {
                 Column(modifier = Modifier.padding(top = 16.dp)) {
@@ -804,10 +789,7 @@ fun ExpressiveConnectedButtonGroup(
                     index == 0 -> fullRadius // Leading outer left is rounded
                     else -> innerRadius // Non-leading left is connected
                 },
-                animationSpec = spring(
-                    dampingRatio = motionScheme.fastSpatial.dampingRatio,
-                    stiffness = motionScheme.fastSpatial.stiffness
-                ),
+                animationSpec = motionScheme.fastSpatialSpec(),
                 label = "startRadius_$index"
             )
 
@@ -817,10 +799,7 @@ fun ExpressiveConnectedButtonGroup(
                     index == totalCount - 1 -> fullRadius // Trailing outer right is rounded
                     else -> innerRadius // Non-trailing right is connected
                 },
-                animationSpec = spring(
-                    dampingRatio = motionScheme.fastSpatial.dampingRatio,
-                    stiffness = motionScheme.fastSpatial.stiffness
-                ),
+                animationSpec = motionScheme.fastSpatialSpec(),
                 label = "endRadius_$index"
             )
 
@@ -1061,10 +1040,7 @@ fun ExpressiveConnectedIconButtonGroup(
             isDeletePressed -> 34.dp
             else -> 38.dp
         },
-        animationSpec = spring(
-            dampingRatio = motionScheme.fastSpatial.dampingRatio,
-            stiffness = motionScheme.fastSpatial.stiffness
-        ),
+        animationSpec = motionScheme.fastSpatialSpec(),
         label = "editWidth"
     )
 
@@ -1074,10 +1050,7 @@ fun ExpressiveConnectedIconButtonGroup(
             isEditPressed -> 34.dp
             else -> 38.dp
         },
-        animationSpec = spring(
-            dampingRatio = motionScheme.fastSpatial.dampingRatio,
-            stiffness = motionScheme.fastSpatial.stiffness
-        ),
+        animationSpec = motionScheme.fastSpatialSpec(),
         label = "deleteWidth"
     )
 
@@ -1215,10 +1188,7 @@ fun ExpressiveFloatingButton(
     // Dynamic M3 Expressive shape morphing: from smooth pill (26dp) to tactile squircle (14dp) on touch
     val cornerRadius by animateDpAsState(
         targetValue = if (isPressed) 14.dp else 26.dp,
-        animationSpec = spring(
-            dampingRatio = motionScheme.fastSpatial.dampingRatio,
-            stiffness = motionScheme.fastSpatial.stiffness
-        ),
+        animationSpec = motionScheme.fastSpatialSpec(),
         label = "floatingBtnCornerRadius"
     )
 
@@ -1348,10 +1318,7 @@ fun ExpressiveSegmentedListItem(
     // Dynamic M3 Expressive shape morphing: inner connected corners flex on touch
     val innerRadius by animateDpAsState(
         targetValue = if (isPressed && onClick != null) 10.dp else 4.dp,
-        animationSpec = spring(
-            dampingRatio = motionScheme.fastSpatial.dampingRatio,
-            stiffness = motionScheme.fastSpatial.stiffness
-        ),
+        animationSpec = motionScheme.fastSpatialSpec(),
         label = "segmentedItemInnerRadius"
     )
 
@@ -1668,18 +1635,12 @@ fun ExpressiveDualActionButtonBar(
 
             val primaryEndRadius by animateDpAsState(
                 targetValue = if (isPrimaryPressed && primaryEnabled) fullRadius else innerRadius,
-                animationSpec = spring(
-                    dampingRatio = motionScheme.fastSpatial.dampingRatio,
-                    stiffness = motionScheme.fastSpatial.stiffness
-                ),
+                animationSpec = motionScheme.fastSpatialSpec(),
                 label = "dualBarPrimaryEndRadius"
             )
             val secondaryStartRadius by animateDpAsState(
                 targetValue = if (isSecondaryPressed && secondaryEnabled) fullRadius else innerRadius,
-                animationSpec = spring(
-                    dampingRatio = motionScheme.fastSpatial.dampingRatio,
-                    stiffness = motionScheme.fastSpatial.stiffness
-                ),
+                animationSpec = motionScheme.fastSpatialSpec(),
                 label = "dualBarSecondaryStartRadius"
             )
 
@@ -1835,10 +1796,7 @@ fun ExpressiveTactileButton(
     )
     val cornerRadius by animateDpAsState(
         targetValue = if (isPressed && enabled) 14.dp else 24.dp,
-        animationSpec = spring(
-            dampingRatio = motionScheme.fastSpatial.dampingRatio,
-            stiffness = motionScheme.fastSpatial.stiffness
-        ),
+        animationSpec = motionScheme.fastSpatialSpec(),
         label = "tactileBtnCorner"
     )
 
@@ -1888,10 +1846,7 @@ fun ExpressiveTactileIconButton(
     val scaleY by animateFloatAsState(if (isPressed) 0.88f else 1f, motionScheme.fastSpatial, label = "tactileIconScaleY")
     val cornerRadius by animateDpAsState(
         targetValue = if (isPressed) 12.dp else 20.dp,
-        animationSpec = spring(
-            dampingRatio = motionScheme.fastSpatial.dampingRatio,
-            stiffness = motionScheme.fastSpatial.stiffness
-        ),
+        animationSpec = motionScheme.fastSpatialSpec(),
         label = "tactileIconCorner"
     )
     FilledTonalIconButton(

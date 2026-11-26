@@ -361,7 +361,7 @@ private fun StatusHeroCard(state: AutoSanitizeState, method: DetectionMethod, ve
     )
     val corner by animateDpAsState(
         if (active) 32.dp else 24.dp,
-        spring(motionScheme.defaultSpatial.dampingRatio, motionScheme.defaultSpatial.stiffness),
+        motionScheme.defaultSpatialSpec(),
         label = "heroCorner"
     )
     val iconScale by animateFloatAsState(if (active) 1f else 0.9f, motionScheme.defaultSpatial, label = "heroIconScale")
@@ -430,8 +430,8 @@ private fun StatusHeroCard(state: AutoSanitizeState, method: DetectionMethod, ve
             }
             AnimatedVisibility(
                 visible = method != DetectionMethod.NONE,
-                enter = expandVertically(spring(motionScheme.defaultSpatial.dampingRatio, motionScheme.defaultSpatial.stiffness)) + fadeIn(motionScheme.fastEffects),
-                exit = shrinkVertically(spring(motionScheme.defaultSpatial.dampingRatio, motionScheme.defaultSpatial.stiffness)) + fadeOut(motionScheme.fastEffects)
+                enter = expandVertically(motionScheme.defaultSpatialSpec()) + fadeIn(motionScheme.fastEffects),
+                exit = shrinkVertically(motionScheme.defaultSpatialSpec()) + fadeOut(motionScheme.fastEffects)
             ) {
                 Surface(shape = RoundedCornerShape(14.dp), color = content.copy(alpha = 0.10f)) {
                     Text(
@@ -566,8 +566,8 @@ private fun AdbRow(status: ClipboardMonitor.Status, shizukuActive: Boolean, inde
                 )
                 AnimatedVisibility(
                     visible = expanded,
-                    enter = expandVertically(spring(motionScheme.defaultSpatial.dampingRatio, motionScheme.defaultSpatial.stiffness)) + fadeIn(motionScheme.fastEffects),
-                    exit = shrinkVertically(spring(motionScheme.defaultSpatial.dampingRatio, motionScheme.defaultSpatial.stiffness)) + fadeOut(motionScheme.fastEffects)
+                    enter = expandVertically(motionScheme.defaultSpatialSpec()) + fadeIn(motionScheme.fastEffects),
+                    exit = shrinkVertically(motionScheme.defaultSpatialSpec()) + fadeOut(motionScheme.fastEffects)
                 ) {
                     Column(modifier = Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         RowBody("Turn on USB debugging, connect your computer and run:")
@@ -708,7 +708,7 @@ private fun CheckBadge(done: Boolean, icon: Int) {
     )
     val corner by animateDpAsState(
         if (done) 21.dp else 13.dp,
-        spring(motionScheme.fastSpatial.dampingRatio, motionScheme.fastSpatial.stiffness),
+        motionScheme.fastSpatialSpec(),
         label = "badgeCorner"
     )
     Box(

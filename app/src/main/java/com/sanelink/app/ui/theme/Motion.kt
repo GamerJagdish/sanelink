@@ -51,7 +51,16 @@ data class SaneLinkMotionScheme(
         dampingRatio = Spring.DampingRatioNoBouncy,
         stiffness = Spring.StiffnessMediumLow
     )
-)
+) {
+    // The tokens above are typed for Float. These give the same springs for any type
+    // (Dp, IntOffset, IntSize, ...), e.g. animateDpAsState(animationSpec = fastSpatialSpec()).
+    fun <T> fastSpatialSpec(): SpringSpec<T> = fastSpatial.retyped()
+    fun <T> defaultSpatialSpec(): SpringSpec<T> = defaultSpatial.retyped()
+    fun <T> fastEffectsSpec(): SpringSpec<T> = fastEffects.retyped()
+    fun <T> defaultEffectsSpec(): SpringSpec<T> = defaultEffects.retyped()
+
+    private fun <T> SpringSpec<Float>.retyped(): SpringSpec<T> = spring(dampingRatio, stiffness)
+}
 
 /**
  * CompositionLocal providing the current [SaneLinkMotionScheme].

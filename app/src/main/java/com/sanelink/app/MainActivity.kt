@@ -190,31 +190,19 @@ class MainActivity : ComponentActivity() {
                         } else if (!isNavigatingBack) {
                             // Forward hierarchical navigation into sub-screen (M3 Shared Axis scale + slide)
                             (slideInHorizontally(
-                                animationSpec = spring(
-                                    dampingRatio = motionScheme.defaultSpatial.dampingRatio,
-                                    stiffness = motionScheme.defaultSpatial.stiffness
-                                ),
+                                animationSpec = motionScheme.defaultSpatialSpec(),
                                 initialOffsetX = { fullWidth -> fullWidth / 4 }
                             ) + scaleIn(
-                                animationSpec = spring(
-                                    dampingRatio = motionScheme.defaultSpatial.dampingRatio,
-                                    stiffness = motionScheme.defaultSpatial.stiffness
-                                ),
+                                animationSpec = motionScheme.defaultSpatialSpec(),
                                 initialScale = 0.92f
                             ) + fadeIn(
                                 animationSpec = motionScheme.fastEffects
                             )).togetherWith(
                                 slideOutHorizontally(
-                                    animationSpec = spring(
-                                        dampingRatio = motionScheme.defaultSpatial.dampingRatio,
-                                        stiffness = motionScheme.defaultSpatial.stiffness
-                                    ),
+                                    animationSpec = motionScheme.defaultSpatialSpec(),
                                     targetOffsetX = { fullWidth -> -fullWidth / 6 }
                                 ) + scaleOut(
-                                    animationSpec = spring(
-                                        dampingRatio = motionScheme.defaultSpatial.dampingRatio,
-                                        stiffness = motionScheme.defaultSpatial.stiffness
-                                    ),
+                                    animationSpec = motionScheme.defaultSpatialSpec(),
                                     targetScale = 0.95f
                                 ) + fadeOut(
                                     animationSpec = motionScheme.fastEffects
@@ -223,31 +211,19 @@ class MainActivity : ComponentActivity() {
                         } else {
                             // Backward navigation returning to main screen
                             (slideInHorizontally(
-                                animationSpec = spring(
-                                    dampingRatio = motionScheme.defaultSpatial.dampingRatio,
-                                    stiffness = motionScheme.defaultSpatial.stiffness
-                                ),
+                                animationSpec = motionScheme.defaultSpatialSpec(),
                                 initialOffsetX = { fullWidth -> -fullWidth / 6 }
                             ) + scaleIn(
-                                animationSpec = spring(
-                                    dampingRatio = motionScheme.defaultSpatial.dampingRatio,
-                                    stiffness = motionScheme.defaultSpatial.stiffness
-                                ),
+                                animationSpec = motionScheme.defaultSpatialSpec(),
                                 initialScale = 0.95f
                             ) + fadeIn(
                                 animationSpec = motionScheme.fastEffects
                             )).togetherWith(
                                 slideOutHorizontally(
-                                    animationSpec = spring(
-                                        dampingRatio = motionScheme.defaultSpatial.dampingRatio,
-                                        stiffness = motionScheme.defaultSpatial.stiffness
-                                    ),
+                                    animationSpec = motionScheme.defaultSpatialSpec(),
                                     targetOffsetX = { fullWidth -> fullWidth / 4 }
                                 ) + scaleOut(
-                                    animationSpec = spring(
-                                        dampingRatio = motionScheme.defaultSpatial.dampingRatio,
-                                        stiffness = motionScheme.defaultSpatial.stiffness
-                                    ),
+                                    animationSpec = motionScheme.defaultSpatialSpec(),
                                     targetScale = 0.92f
                                 ) + fadeOut(
                                     animationSpec = motionScheme.fastEffects

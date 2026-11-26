@@ -278,10 +278,10 @@ fun AddEditCustomRuleScreen(
             AnimatedVisibility(
                 visible = matchingProvider != null,
                 enter = fadeIn(motionScheme.fastEffects) + expandVertically(
-                    spring(motionScheme.defaultSpatial.dampingRatio, motionScheme.defaultSpatial.stiffness)
+                    motionScheme.defaultSpatialSpec()
                 ),
                 exit = fadeOut(motionScheme.fastEffects) + shrinkVertically(
-                    spring(motionScheme.defaultSpatial.dampingRatio, motionScheme.defaultSpatial.stiffness)
+                    motionScheme.defaultSpatialSpec()
                 )
             ) {
                 matchingProvider?.let { matchedId ->

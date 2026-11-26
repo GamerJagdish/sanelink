@@ -153,10 +153,7 @@ fun RulesScreen(
 
     val motionScheme = LocalMotionScheme.current
     val itemPlacementSpec = remember(motionScheme) {
-        spring<IntOffset>(
-            dampingRatio = motionScheme.defaultSpatial.dampingRatio,
-            stiffness = motionScheme.defaultSpatial.stiffness
-        )
+        motionScheme.defaultSpatialSpec<IntOffset>()
     }
     val itemFadeSpec = motionScheme.fastEffects
 
@@ -339,10 +336,7 @@ fun RulesScreen(
                                 )
                                 val toggleCornerRadius by animateDpAsState(
                                     targetValue = if (isTogglePressed) 8.dp else 12.dp,
-                                    animationSpec = spring(
-                                        dampingRatio = motionScheme.fastSpatial.dampingRatio,
-                                        stiffness = motionScheme.fastSpatial.stiffness
-                                    ),
+                                    animationSpec = motionScheme.fastSpatialSpec(),
                                     label = "bulkToggleCornerRadius"
                                 )
 
@@ -631,10 +625,7 @@ private fun BuiltInProviderCard(
 
     val cornerRadius by animateDpAsState(
         targetValue = if (isPressed) 16.dp else 22.dp,
-        animationSpec = spring(
-            dampingRatio = motionScheme.fastSpatial.dampingRatio,
-            stiffness = motionScheme.fastSpatial.stiffness
-        ),
+        animationSpec = motionScheme.fastSpatialSpec(),
         label = "providerCornerRadius"
     )
 
@@ -850,10 +841,7 @@ private fun CustomRuleCard(
 
     val cornerRadius by animateDpAsState(
         targetValue = if (isPressed) 16.dp else 22.dp,
-        animationSpec = spring(
-            dampingRatio = motionScheme.fastSpatial.dampingRatio,
-            stiffness = motionScheme.fastSpatial.stiffness
-        ),
+        animationSpec = motionScheme.fastSpatialSpec(),
         label = "customRuleCornerRadius"
     )
 

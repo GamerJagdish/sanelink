@@ -328,18 +328,12 @@ fun BuiltInRuleDetailScreen(
             transitionSpec = {
                 val direction = if (targetState) 1 else -1
                 (slideInHorizontally(
-                    animationSpec = spring(
-                        dampingRatio = motionScheme.defaultSpatial.dampingRatio,
-                        stiffness = motionScheme.defaultSpatial.stiffness
-                    ),
+                    animationSpec = motionScheme.defaultSpatialSpec(),
                     initialOffsetX = { fullWidth -> direction * (fullWidth / 4) }
                 ) + fadeIn(animationSpec = motionScheme.fastEffects))
                     .togetherWith(
                         slideOutHorizontally(
-                            animationSpec = spring(
-                                dampingRatio = motionScheme.defaultSpatial.dampingRatio,
-                                stiffness = motionScheme.defaultSpatial.stiffness
-                            ),
+                            animationSpec = motionScheme.defaultSpatialSpec(),
                             targetOffsetX = { fullWidth -> -direction * (fullWidth / 4) }
                         ) + fadeOut(animationSpec = motionScheme.fastEffects)
                     )
