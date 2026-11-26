@@ -90,12 +90,13 @@ class UrlSanitizerTest {
 
     @Test
     fun testGoogleRedirectUnwrap() {
-        val input = "https://www.google.com/url?q=https%3A%2F%2Fgithub.com%2Ftrending%3Futm_source%3Dgoogle_search&sa=D&sntz=1"
+        // (github.com itself is exempt from the global rules upstream, so use a neutral target)
+        val input = "https://www.google.com/url?q=https%3A%2F%2Fexample.com%2Ftrending%3Futm_source%3Dgoogle_search&sa=D&sntz=1"
         val result = sanitizer.sanitizeSingleUrl(input)
 
         assertTrue(result.wasModified)
         // Unwrapped AND recursively stripped nested utm_source!
-        assertEquals("https://github.com/trending", result.cleanText)
+        assertEquals("https://example.com/trending", result.cleanText)
     }
 
     @Test
