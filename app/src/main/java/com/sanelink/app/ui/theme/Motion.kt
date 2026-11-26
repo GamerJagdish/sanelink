@@ -31,10 +31,6 @@ data class SaneLinkMotionScheme(
         dampingRatio = Spring.DampingRatioMediumBouncy,
         stiffness = Spring.StiffnessLow
     ),
-    val slowSpatial: SpringSpec<Float> = spring(
-        dampingRatio = 0.65f,
-        stiffness = Spring.StiffnessVeryLow
-    ),
 
     // Effects Springs (Alpha fades, state layers)
     val fastEffects: SpringSpec<Float> = spring(
