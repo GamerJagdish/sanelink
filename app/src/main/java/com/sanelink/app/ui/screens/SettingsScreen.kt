@@ -206,7 +206,8 @@ fun SettingsScreen(
                 modifier = Modifier.padding(start = 12.dp)
             )
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                RecentLinksSettingRow(index = 0, count = 1, onOpen = onOpenRecentLinks)
+                RecentLinksSettingRow(index = 0, count = 2, onOpen = onOpenRecentLinks)
+                BackupSettingRow(index = 1, count = 2)
             }
         }
 
