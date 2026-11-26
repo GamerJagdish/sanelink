@@ -1200,13 +1200,6 @@ fun ExpressiveFloatingButton(
     val isPressed by interactionSource.collectIsPressedAsState()
     val motionScheme = LocalMotionScheme.current
 
-    var dragOffsetX by remember { mutableFloatStateOf(0f) }
-    val animatedDragOffset by animateFloatAsState(
-        targetValue = dragOffsetX,
-        animationSpec = motionScheme.fastSpatial,
-        label = "floatingBtnDragOffset"
-    )
-
     // Tactile squish feedback: on press/drag, button squishes vertically and slightly expands horizontally
     val pressScaleX by animateFloatAsState(
         targetValue = if (isPressed) 0.98f else 1f,
@@ -1246,27 +1239,8 @@ fun ExpressiveFloatingButton(
             .graphicsLayer {
                 scaleX = pressScaleX
                 scaleY = pressScaleY
-                translationX = animatedDragOffset
             }
-            .pointerInput(enabled) {
-                if (!enabled) return@pointerInput
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                    val startX = down.position.x
-                    try {
-                        do {
-                            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                            val current = event.changes.firstOrNull { it.id == down.id } ?: break
-                            if (current.pressed) {
-                                val rawDelta = current.position.x - startX
-                                dragOffsetX = (rawDelta * 0.35f).coerceIn(-48f, 48f)
-                            }
-                        } while (event.changes.any { it.id == down.id && it.pressed })
-                    } finally {
-                        dragOffsetX = 0f
-                    }
-                }
-            }
+            .expressiveDragWobble(enabled)
             .clip(shape)
             .then(
                 if (hazeState != null) {
