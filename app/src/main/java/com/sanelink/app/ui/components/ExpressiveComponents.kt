@@ -517,17 +517,17 @@ fun ExpressiveSandboxCard(
 
             val keyboardController = LocalSoftwareKeyboardController.current
             // Not keyed on inputText: re-creating it on every keystroke moved the cursor to the end.
-            // External changes (e.g. Paste Link) are synced by the LaunchedEffect below.
             var textFieldValue by remember {
                 mutableStateOf(TextFieldValue(text = inputText, selection = TextRange(inputText.length)))
             }
+            // Last text this field reported. inputText can lag a keystroke or two behind while
+            // typing fast; only values we did not send (Paste Link, clear) are external changes.
+            var lastReportedText by remember { mutableStateOf(inputText) }
 
             LaunchedEffect(inputText) {
-                if (inputText != textFieldValue.text) {
-                    textFieldValue = textFieldValue.copy(
-                        text = inputText,
-                        selection = TextRange(inputText.length)
-                    )
+                if (inputText != lastReportedText) {
+                    lastReportedText = inputText
+                    textFieldValue = TextFieldValue(text = inputText, selection = TextRange(inputText.length))
                 }
             }
 
@@ -535,10 +535,10 @@ fun ExpressiveSandboxCard(
                 value = textFieldValue,
                 onValueChange = { newValue ->
                     textFieldValue = newValue
-                    if (newValue.text != inputText) {
+                    if (newValue.text != lastReportedText) {
+                        lastReportedText = newValue.text
                         onInputChanged(newValue.text)
                     }
-                    keyboardController?.show()
                 },
                 placeholder = {
                     Text(
@@ -955,13 +955,14 @@ fun ExpressiveSearchBar(
     var textFieldValue by remember {
         mutableStateOf(TextFieldValue(text = query, selection = TextRange(query.length)))
     }
+    // Only sync values this field did not report itself (e.g. the clear button); the parent's
+    // query can lag behind fast typing and must not overwrite newer input.
+    var lastReportedText by remember { mutableStateOf(query) }
 
     LaunchedEffect(query) {
-        if (query != textFieldValue.text) {
-            textFieldValue = textFieldValue.copy(
-                text = query,
-                selection = TextRange(query.length)
-            )
+        if (query != lastReportedText) {
+            lastReportedText = query
+            textFieldValue = TextFieldValue(text = query, selection = TextRange(query.length))
         }
     }
 
@@ -969,10 +970,10 @@ fun ExpressiveSearchBar(
         value = textFieldValue,
         onValueChange = { newValue ->
             textFieldValue = newValue
-            if (newValue.text != query) {
+            if (newValue.text != lastReportedText) {
+                lastReportedText = newValue.text
                 onQueryChange(newValue.text)
             }
-            keyboardController?.show()
         },
         placeholder = {
             Text(
