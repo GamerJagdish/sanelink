@@ -104,6 +104,8 @@ object ClipboardMonitor {
     /** Called when the accessibility service is unbound or destroyed. */
     fun stop() {
         ShizukuManager.stopWatching()
+        // Drop pending focused reads and logcat restarts scheduled while the service ran
+        mainHandler.removeCallbacksAndMessages(null)
         clipboardManager?.removePrimaryClipChangedListener(clipListener)
         clipboardManager = null
         stopLogStream()
