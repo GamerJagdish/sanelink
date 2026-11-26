@@ -52,4 +52,20 @@ class ClipboardLogParserTest {
         )
         assertEquals("1795600000.000", ClipboardLogParser.buildLogcatCommand(1_795_600_000_000L)[4])
     }
+
+    @Test
+    fun `probe tag is only streamed when asked for`() {
+        assertEquals(
+            listOf("logcat", "-v", "brief", "-T", "1795600000.000", "ClipboardService:E", "ActivityTaskManager:I", "*:S"),
+            ClipboardLogParser.buildLogcatCommand(1_795_600_000_000L, includeProbe = true)
+        )
+    }
+
+    @Test
+    fun `lines from other processes are recognised by pid`() {
+        val system = "I/ActivityTaskManager(  575): START u0 {cmp=com.android.chrome/.Main}"
+        assertTrue(ClipboardLogParser.isFromOtherProcess(system, ownPid = 14366))
+        assertFalse(ClipboardLogParser.isFromOtherProcess("D/SaneLink(14366): hello", ownPid = 14366))
+        assertFalse(ClipboardLogParser.isFromOtherProcess("--------- beginning of main", ownPid = 14366))
+    }
 }
