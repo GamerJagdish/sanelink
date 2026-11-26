@@ -94,7 +94,6 @@ object ClipboardCleaner {
         val prefs = SaneLinkApp.instance.preferences
         if (outcome == Outcome.CLEANED && result != null) {
             prefs.recordSanitization(result.removedParameters.size)
-            ClipboardMonitor.reportCleaned()
             context.performClickHapticIfEnabled()
         }
         if (!prefs.showToastEnabled.first()) return

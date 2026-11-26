@@ -60,8 +60,7 @@ object ClipboardMonitor {
         /** At least one system clipboard signal arrived (logcat or Shizuku), proving detection works. */
         val logStreamVerified: Boolean = false,
         /** Android 13+: the stream must be (re)started while SaneLink is open. */
-        val logStreamNeedsAppOpen: Boolean = false,
-        val cleanedThisSession: Int = 0
+        val logStreamNeedsAppOpen: Boolean = false
     )
 
     val guard = ClipboardLoopGuard()
@@ -152,9 +151,6 @@ object ClipboardMonitor {
         requestFocusedRead()
     }
 
-    internal fun reportCleaned() {
-        _status.update { it.copy(cleanedThisSession = it.cleanedThisSession + 1) }
-    }
 
     /**
      * Something suggests the clipboard just changed. On Android 10+ we need focus to read it,
