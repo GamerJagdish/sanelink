@@ -1,5 +1,6 @@
 package com.sanelink.app.service
 
+import com.sanelink.app.SaneLinkApp
 import android.Manifest
 import android.content.ClipboardManager
 import android.content.Context
@@ -72,6 +73,8 @@ object ClipboardMonitor {
     private var logcatProcess: Process? = null
     private var logcatThread: Thread? = null
     @Volatile private var isAppInForeground = false
+    /** Mirrors the dashboard toggle, so paused protection never steals focus. */
+    @Volatile private var autoSanitizeEnabled = true
 
     private val clipListener = ClipboardManager.OnPrimaryClipChangedListener {
         val ctx = appContext ?: return@OnPrimaryClipChangedListener
@@ -84,7 +87,11 @@ object ClipboardMonitor {
         val ctx = context.applicationContext
         if (appContext != null) stop()
         appContext = ctx
-        scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+        scope = CoroutineScope(SupervisorJob() + Dispatchers.Main).also { s ->
+            s.launch {
+                SaneLinkApp.instance.preferences.autoSanitizeEnabled.collect { autoSanitizeEnabled = it }
+            }
+        }
         clipboardManager = (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)?.also {
             it.addPrimaryClipChangedListener(clipListener)
         }
@@ -150,6 +157,8 @@ object ClipboardMonitor {
      */
     fun requestFocusedRead(delayMillis: Long = 0L) {
         val ctx = appContext ?: return
+        // Paused from the dashboard: don't open the reader (it would take focus for nothing)
+        if (!autoSanitizeEnabled) return
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             // Background reads are allowed; the listener normally already handled it.
             scope?.launch { ClipboardCleaner.cleanPrimaryClip(ctx) }
