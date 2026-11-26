@@ -711,8 +711,7 @@ fun ExpressiveSandboxCard(
  */
 data class ExpressiveConnectedButtonItem(
     val label: String,
-    val count: Int? = null,
-    val icon: Painter? = null
+    val count: Int? = null
 )
 
 /**
@@ -854,15 +853,6 @@ fun ExpressiveConnectedButtonGroup(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    if (item.icon != null) {
-                        Icon(
-                            painter = item.icon,
-                            contentDescription = null,
-                            tint = contentColor,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                    }
                     Text(
                         text = item.label,
                         style = MaterialTheme.typography.labelLarge,
@@ -1323,13 +1313,12 @@ fun ExpressiveFloatingButton(
 /**
  * Material 3 Expressive Leading Badge for list items.
  *
- * Standardized 42dp rounded squircle container for icons or initials/monograms.
+ * Standardized 42dp rounded squircle container for an icon.
  */
 @Composable
 fun ExpressiveLeadingBadge(
+    icon: Painter,
     modifier: Modifier = Modifier,
-    icon: Painter? = null,
-    monogram: String? = null,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.65f),
     contentColor: Color = MaterialTheme.colorScheme.primary
 ) {
@@ -1340,21 +1329,12 @@ fun ExpressiveLeadingBadge(
             .background(containerColor),
         contentAlignment = Alignment.Center
     ) {
-        if (icon != null) {
-            Icon(
-                painter = icon,
-                contentDescription = null,
-                tint = contentColor,
-                modifier = Modifier.size(20.dp)
-            )
-        } else if (monogram != null) {
-            Text(
-                text = monogram.take(2).uppercase(),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = contentColor
-            )
-        }
+        Icon(
+            painter = icon,
+            contentDescription = null,
+            tint = contentColor,
+            modifier = Modifier.size(20.dp)
+        )
     }
 }
 
