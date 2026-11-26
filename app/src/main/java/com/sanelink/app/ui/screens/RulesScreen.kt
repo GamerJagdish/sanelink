@@ -174,7 +174,8 @@ fun RulesScreen(
                         rule.urlPattern.contains(searchQuery, ignoreCase = true)
             }
         }
-        filtered
+        // Alphabetical, so a provider is easy to find by scrolling
+        filtered.sortedBy { (name, _) -> name.lowercase() }
     }
 
     val filteredCustomRules = remember(customRules, searchQuery) {
@@ -184,13 +185,16 @@ fun RulesScreen(
             customRules.filter { rule ->
                 rule.name.contains(searchQuery, ignoreCase = true) ||
                         rule.urlPattern.contains(searchQuery, ignoreCase = true) ||
+                        (rule.matchDomain?.contains(searchQuery, ignoreCase = true) == true) ||
+                        (rule.swapToDomain?.contains(searchQuery, ignoreCase = true) == true) ||
                         rule.stripParameters.any { it.contains(searchQuery, ignoreCase = true) } ||
                         (rule.rewritePattern?.contains(searchQuery, ignoreCase = true) == true)
             }
         }
     }
 
-    val builtInCount = if (searchQuery.isBlank()) clearUrlsData.providers.size else providersList.size
+    // Counts follow the active search and "patched only" filter
+    val builtInCount = providersList.size
     val customCount = if (searchQuery.isBlank()) customRules.size else filteredCustomRules.size
 
     val allBuiltInDisabled = remember(clearUrlsData, disabledProviderIds) {
@@ -285,7 +289,8 @@ fun RulesScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    val activeCount = clearUrlsData.providers.size - disabledProviderIds.size
+                                    // Ignore disabled ids of providers that no longer exist
+                                    val activeCount = clearUrlsData.providers.keys.count { it !in disabledProviderIds }
                                     Text(
                                         text = when {
                                             showOnlyPatched -> "${providersList.size} patched"
