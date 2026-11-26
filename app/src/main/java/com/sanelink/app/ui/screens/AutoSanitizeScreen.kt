@@ -106,7 +106,8 @@ private fun deriveState(
     !autoEnabled -> AutoSanitizeState.PAUSED
     !serviceEnabled -> AutoSanitizeState.NEEDS_SETUP
     !needsSystemSignal -> AutoSanitizeState.FULL
-    status.shizukuActive || shizuku == ShizukuManager.State.ACTIVE || status.logAccessGranted -> AutoSanitizeState.FULL
+    status.shizukuActive || shizuku == ShizukuManager.State.ACTIVE -> AutoSanitizeState.FULL
+    status.logAccessGranted && !status.logAccessDenied -> AutoSanitizeState.FULL
     else -> AutoSanitizeState.PARTIAL
 }
 
@@ -118,7 +119,7 @@ private fun deriveMethod(
     !serviceEnabled -> DetectionMethod.NONE
     !needsSystemSignal -> DetectionMethod.DIRECT
     status.shizukuActive || shizuku == ShizukuManager.State.ACTIVE -> DetectionMethod.SHIZUKU
-    status.logAccessGranted -> DetectionMethod.ADB
+    status.logAccessGranted && !status.logAccessDenied -> DetectionMethod.ADB
     else -> DetectionMethod.COPY_BUTTONS
 }
 
@@ -648,7 +649,7 @@ private fun AdbRow(status: ClipboardMonitor.Status, shizukuActive: Boolean, inde
         index = index,
         count = count,
         onClick = { expanded = !expanded },
-        leading = { CheckBadge(done = status.logAccessGranted, icon = R.drawable.ic_code) },
+        leading = { CheckBadge(done = status.logAccessGranted && !status.logAccessDenied, icon = R.drawable.ic_code) },
         headline = { RowTitle("ADB command") },
         supporting = {
             Column {
@@ -659,6 +660,21 @@ private fun AdbRow(status: ClipboardMonitor.Status, shizukuActive: Boolean, inde
                         else -> "No extra app. Run one command from a computer, once."
                     }
                 )
+                // Android 13+ prompt was declined: offer to show it again (needs SaneLink on screen)
+                AnimatedVisibility(
+                    visible = status.logAccessGranted && status.logAccessDenied && !shizukuActive,
+                    enter = expandVertically(motionScheme.defaultSpatialSpec()) + fadeIn(motionScheme.fastEffects),
+                    exit = shrinkVertically(motionScheme.defaultSpatialSpec()) + fadeOut(motionScheme.fastEffects)
+                ) {
+                    Column(modifier = Modifier.padding(top = 12.dp)) {
+                        TactileActionButton(
+                            text = "Ask again",
+                            icon = R.drawable.ic_refresh,
+                            filled = true,
+                            onClick = { ClipboardMonitor.retryLogAccess() }
+                        )
+                    }
+                }
                 AnimatedVisibility(
                     visible = expanded,
                     enter = expandVertically(motionScheme.defaultSpatialSpec()) + fadeIn(motionScheme.fastEffects),
@@ -689,8 +705,9 @@ private fun AdbRow(status: ClipboardMonitor.Status, shizukuActive: Boolean, inde
 
 private fun logStreamDetail(status: ClipboardMonitor.Status): String = when {
     !status.serviceConnected -> "Granted. Starts once the accessibility service is on."
+    status.logAccessDenied -> "Android's \"access all device logs\" prompt was declined, so copies can't be detected this way. Tap Ask again and choose Allow."
     status.logStreamVerified -> "Granted and verified."
-    status.logStreamRunning -> "Granted and listening. Copy any link to confirm."
+    status.logStreamRunning -> "Granted. Waiting for Android to confirm access…"
     status.logStreamNeedsAppOpen -> "Granted. Starting while SaneLink is open…"
     else -> "Granted."
 }

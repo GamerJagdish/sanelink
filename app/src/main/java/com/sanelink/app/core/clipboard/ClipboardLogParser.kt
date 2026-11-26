@@ -18,6 +18,14 @@ package com.sanelink.app.core.clipboard
 object ClipboardLogParser {
 
     const val LOG_TAG = "ClipboardService"
+
+    /**
+     * System tag logged on every activity start or transition. Our app never logs it, so a
+     * line with it proves the stream can read other processes' logs (i.e. log access works).
+     */
+    const val PROBE_TAG = "ActivityTaskManager"
+
+    private val BRIEF_PID = Regex("""^[VDIWEF]/[^(]*\(\s*(\d+)\)""")
     private const val DENIAL_PREFIX = "Denying clipboard access to "
 
     /** Returns true if [line] reports a denied clipboard notification for [packageName]. */
@@ -45,15 +53,28 @@ object ClipboardLogParser {
      *
      * The start time uses logcat's epoch `sssss.mmm` form, so it doesn't depend on the
      * caller's time zone (the Shizuku shell process may not share the app's).
+     *
+     * With [includeProbe], informational [PROBE_TAG] lines are streamed too, so the reader can
+     * tell whether Android actually granted access to other apps' logs.
      */
-    fun buildLogcatCommand(startTimeMillis: Long): List<String> {
+    fun buildLogcatCommand(startTimeMillis: Long, includeProbe: Boolean = false): List<String> {
         val since = "${startTimeMillis / 1000}.${(startTimeMillis % 1000).toString().padStart(3, '0')}"
-        return listOf(
-            "logcat",
-            "-v", "brief",
-            "-T", since,
-            "$LOG_TAG:E",
-            "*:S"
-        )
+        return buildList {
+            add("logcat")
+            add("-v"); add("brief")
+            add("-T"); add(since)
+            add("$LOG_TAG:E")
+            if (includeProbe) add("$PROBE_TAG:I")
+            add("*:S")
+        }
+    }
+
+    /**
+     * True when a `-v brief` [line] ("I/Tag( 575): ...") was logged by a process other than
+     * [ownPid]. Android 13+ only shows other processes' lines once log access is allowed.
+     */
+    fun isFromOtherProcess(line: String, ownPid: Int): Boolean {
+        val pid = BRIEF_PID.find(line)?.groupValues?.get(1)?.toIntOrNull() ?: return false
+        return pid != ownPid
     }
 }

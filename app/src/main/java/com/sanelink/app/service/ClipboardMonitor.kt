@@ -47,6 +47,9 @@ object ClipboardMonitor {
     private const val LOGCAT_RESTART_DELAY_MS = 5_000L
     /** How long to let an installed Shizuku connect before falling back to our own log reader. */
     private const val SHIZUKU_GRACE_MS = 5_000L
+    /** After the log-access prompt closes, how long to wait for proof of access before calling it declined. */
+    private const val CONSENT_CHECK_MS = 4_000L
+    private const val PROBE_LOOKBACK_MS = 5_000L
 
     data class Status(
         val serviceConnected: Boolean = false,
@@ -56,8 +59,13 @@ object ClipboardMonitor {
         val logStreamRunning: Boolean = false,
         /** Shizuku's shell service is streaming clipboard signals (preferred over our own logcat). */
         val shizukuActive: Boolean = false,
-        /** At least one system clipboard signal arrived (logcat or Shizuku), proving detection works. */
+        /**
+         * Detection is proven to work: a system clipboard signal arrived (logcat or Shizuku), or
+         * our log reader saw another process's lines, which Android only allows once access is granted.
+         */
         val logStreamVerified: Boolean = false,
+        /** Android 13+: the user declined the "access all device logs" prompt. */
+        val logAccessDenied: Boolean = false,
         /** Android 13+: the stream must be (re)started while SaneLink is open. */
         val logStreamNeedsAppOpen: Boolean = false
     )
@@ -77,6 +85,9 @@ object ClipboardMonitor {
     /** Mirrors the dashboard toggle, so paused protection never steals focus. */
     @Volatile private var autoSanitizeEnabled = true
     private var shizukuGraceUntil = 0L
+    /** Android 13+: our log reader is running but access hasn't been confirmed yet. */
+    @Volatile private var awaitingLogConsent = false
+    private val consentCheck = Runnable { checkLogConsent() }
 
     private val clipListener = ClipboardManager.OnPrimaryClipChangedListener {
         val ctx = appContext ?: return@OnPrimaryClipChangedListener
@@ -130,6 +141,39 @@ object ClipboardMonitor {
         isAppInForeground = true
         refreshPermissionState(context.applicationContext)
         maybeStartLogStream()
+        // Back from the log-access prompt (or opened while it's pending): check the answer shortly
+        if (awaitingLogConsent) {
+            mainHandler.removeCallbacks(consentCheck)
+            mainHandler.postDelayed(consentCheck, CONSENT_CHECK_MS)
+        }
+    }
+
+    /** "Ask again" after the log-access prompt was declined. Call while SaneLink is on screen. */
+    fun retryLogAccess() {
+        _status.update { it.copy(logAccessDenied = false) }
+        stopLogStream()
+        maybeStartLogStream()
+    }
+
+    /**
+     * Android doesn't report the prompt's answer. If the stream has seen nothing from other
+     * processes a few seconds after SaneLink is back on screen, the user declined: Android then
+     * only shows the app its own logs. Stop the useless reader and say so on the setup page.
+     */
+    private fun checkLogConsent() {
+        if (!awaitingLogConsent || !isAppInForeground) return
+        if (logcatProcess?.isAliveCompat() != true) return
+        awaitingLogConsent = false
+        stopLogStream()
+        _status.update { it.copy(logAccessDenied = true) }
+    }
+
+    private fun onLogAccessConfirmed() {
+        awaitingLogConsent = false
+        mainHandler.removeCallbacks(consentCheck)
+        if (!_status.value.logStreamVerified || _status.value.logAccessDenied) {
+            _status.update { it.copy(logStreamVerified = true, logAccessDenied = false) }
+        }
     }
 
     fun onAppBackground() {
@@ -144,9 +188,7 @@ object ClipboardMonitor {
 
     /** The system reported a clipboard change for our package (logcat or Shizuku). */
     private fun onSystemClipboardSignal() {
-        if (!_status.value.logStreamVerified) {
-            _status.update { it.copy(logStreamVerified = true) }
-        }
+        onLogAccessConfirmed()
         requestFocusedRead()
     }
 
@@ -185,6 +227,8 @@ object ClipboardMonitor {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return // not needed
         if (_status.value.shizukuActive) return
         if (!_status.value.logAccessGranted) return
+        // Declined until the user taps "Ask again", so the prompt doesn't reappear on every open
+        if (_status.value.logAccessDenied) return
         if (logcatProcess?.isAliveCompat() == true) return
 
         // Shizuku needs no log-access prompt. If it's installed, give it a moment to connect
@@ -206,8 +250,15 @@ object ClipboardMonitor {
     }
 
     private fun startLogStream(packageName: String) {
+        // Android 13+ shows a consent prompt for log access and doesn't report the answer:
+        // stream a probe tag too, so seeing another process's line proves access was allowed.
+        val needsConsent = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        val ownPid = android.os.Process.myPid()
         val process = try {
-            ProcessBuilder(ClipboardLogParser.buildLogcatCommand(System.currentTimeMillis()))
+            // Start a few seconds back so SaneLink's own recent launch lines (logged by the system)
+            // count as proof when Android already allowed access and shows no prompt.
+            val since = System.currentTimeMillis() - if (needsConsent) PROBE_LOOKBACK_MS else 0L
+            ProcessBuilder(ClipboardLogParser.buildLogcatCommand(since, includeProbe = needsConsent))
                 .redirectErrorStream(true)
                 .start()
         } catch (e: Exception) {
@@ -216,12 +267,20 @@ object ClipboardMonitor {
         }
         logcatProcess = process
         _status.update { it.copy(logStreamRunning = true, logStreamNeedsAppOpen = false) }
+        awaitingLogConsent = needsConsent
+        if (needsConsent) {
+            mainHandler.removeCallbacks(consentCheck)
+            mainHandler.postDelayed(consentCheck, CONSENT_CHECK_MS)
+        }
 
         logcatThread = Thread({
             try {
                 BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
                     while (true) {
                         val line = reader.readLine() ?: break
+                        if (awaitingLogConsent && ClipboardLogParser.isFromOtherProcess(line, ownPid)) {
+                            mainHandler.post { onLogAccessConfirmed() }
+                        }
                         if (ClipboardLogParser.isClipboardDenialFor(line, packageName)) {
                             mainHandler.post { onSystemClipboardSignal() }
                         }
@@ -252,6 +311,8 @@ object ClipboardMonitor {
     }
 
     private fun stopLogStream() {
+        awaitingLogConsent = false
+        mainHandler.removeCallbacks(consentCheck)
         val process = logcatProcess
         logcatProcess = null
         logcatThread = null
