@@ -1,5 +1,6 @@
 package com.sanelink.app.service
 
+import com.sanelink.app.util.trackersLabel
 import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ClipboardManager
@@ -109,7 +110,7 @@ object ClipboardCleaner {
         val msg = when (outcome) {
             Outcome.CLEANED -> {
                 val count = result?.removedParameters?.size ?: 0
-                if (count > 0) "SaneLink: removed $count tracker${if (count > 1) "s" else ""}" else "SaneLink: clean link copied"
+                if (count > 0) "SaneLink: removed ${trackersLabel(count)}" else "SaneLink: clean link copied"
             }
             Outcome.ALREADY_CLEAN -> if (manual) "SaneLink: no tracking found" else null
             Outcome.SKIPPED -> if (manual) "SaneLink: nothing to clean on the clipboard" else null

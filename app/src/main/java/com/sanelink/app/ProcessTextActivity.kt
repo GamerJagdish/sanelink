@@ -1,5 +1,6 @@
 package com.sanelink.app
 
+import com.sanelink.app.util.trackersLabel
 import com.sanelink.app.service.ClipboardCleaner
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -60,7 +61,7 @@ class ProcessTextActivity : ComponentActivity() {
 
         if (app.preferences.showToastEnabled.first()) {
             val count = result.removedParameters.size
-            val removed = if (count > 0) " (Removed $count tracker${if (count > 1) "s" else ""})" else ""
+            val removed = if (count > 0) " (Removed ${trackersLabel(count)})" else ""
             val msg = when {
                 result.wasModified && !isReadOnly -> "Link cleaned in place!$removed"
                 result.wasModified -> "Cleaned & copied!$removed"

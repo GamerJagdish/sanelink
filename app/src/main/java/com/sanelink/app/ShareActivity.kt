@@ -1,5 +1,6 @@
 package com.sanelink.app
 
+import com.sanelink.app.util.trackersLabel
 import com.sanelink.app.service.ClipboardCleaner
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -54,7 +55,7 @@ class ShareActivity : ComponentActivity() {
             val count = result.removedParameters.size
             val msg = when {
                 !result.wasModified -> "Link is already clean! Copied."
-                count > 0 -> "Cleaned & copied! (Removed $count tracker${if (count > 1) "s" else ""})"
+                count > 0 -> "Cleaned & copied! (Removed ${trackersLabel(count)})"
                 else -> "Cleaned & copied to clipboard"
             }
             Toast.makeText(applicationContext, msg, Toast.LENGTH_SHORT).show()
