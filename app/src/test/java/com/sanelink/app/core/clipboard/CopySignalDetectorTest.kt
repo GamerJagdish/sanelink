@@ -35,6 +35,15 @@ class CopySignalDetectorTest {
     }
 
     @Test
+    fun `copy words only match as whole words`() {
+        assertFalse(signal(EventKind.CLICK, "Photocopier"))
+        assertFalse(signal(EventKind.CLICK, "Saline"))
+        assertFalse(signal(EventKind.TOAST, "Clipboard cleared"))
+        assertTrue(signal(EventKind.CLICK, "Copy link"))
+        assertTrue(signal(EventKind.CLICK, "Salin tautan"))
+    }
+
+    @Test
     fun `copied toasts and announcements are detected`() {
         assertTrue(signal(EventKind.TOAST, "Link copied to clipboard"))
         assertTrue(signal(EventKind.ANNOUNCEMENT, "Copied"))
