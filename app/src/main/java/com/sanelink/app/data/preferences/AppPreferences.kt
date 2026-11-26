@@ -1,5 +1,9 @@
 package com.sanelink.app.data.preferences
 
+import kotlinx.coroutines.flow.first
+import com.sanelink.app.core.backup.BackupCodec
+import com.sanelink.app.core.backup.BackupSettings
+import com.sanelink.app.core.backup.SaneLinkBackup
 import com.sanelink.app.core.history.RecentLinks
 import com.sanelink.app.core.history.RecentLink
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -200,6 +204,40 @@ class AppPreferences(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs[KEY_HISTORY_LIMIT] = limit
             val trimmed = RecentLinks.trim(decodeRecentLinks(prefs[KEY_RECENT_LINKS]), limit)
+            if (trimmed.isEmpty()) prefs.remove(KEY_RECENT_LINKS)
+            else prefs[KEY_RECENT_LINKS] = json.encodeToString(trimmed)
+        }
+    }
+
+    /** Snapshot of the user's setup for export (the recent links log is not included). */
+    suspend fun exportBackup(): SaneLinkBackup {
+        val prefs = context.dataStore.data.first()
+        return SaneLinkBackup(
+            exportedAt = System.currentTimeMillis(),
+            customRules = decodeCustomRules(prefs[KEY_CUSTOM_RULES]),
+            userPatches = decodeUserPatches(prefs[KEY_USER_PATCHES]),
+            disabledProviders = prefs[KEY_DISABLED_PROVIDERS] ?: emptySet(),
+            settings = BackupSettings(
+                autoSanitize = prefs[KEY_AUTO_SANITIZE] ?: true,
+                hapticFeedback = prefs[KEY_HAPTIC_FEEDBACK] ?: true,
+                showToast = prefs[KEY_SHOW_TOAST] ?: true,
+                historyLimit = prefs[KEY_HISTORY_LIMIT] ?: RecentLinks.DEFAULT_LIMIT
+            )
+        )
+    }
+
+    /** Applies an imported backup in one write, merged with the current setup or replacing it. */
+    suspend fun importBackup(incoming: SaneLinkBackup, replace: Boolean) {
+        val result = BackupCodec.combine(exportBackup(), incoming, replace)
+        context.dataStore.edit { prefs ->
+            prefs[KEY_CUSTOM_RULES] = json.encodeToString(result.customRules)
+            prefs[KEY_USER_PATCHES] = json.encodeToString(result.userPatches)
+            prefs[KEY_DISABLED_PROVIDERS] = result.disabledProviders
+            prefs[KEY_AUTO_SANITIZE] = result.settings.autoSanitize
+            prefs[KEY_HAPTIC_FEEDBACK] = result.settings.hapticFeedback
+            prefs[KEY_SHOW_TOAST] = result.settings.showToast
+            prefs[KEY_HISTORY_LIMIT] = result.settings.historyLimit
+            val trimmed = RecentLinks.trim(decodeRecentLinks(prefs[KEY_RECENT_LINKS]), result.settings.historyLimit)
             if (trimmed.isEmpty()) prefs.remove(KEY_RECENT_LINKS)
             else prefs[KEY_RECENT_LINKS] = json.encodeToString(trimmed)
         }
