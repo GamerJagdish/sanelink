@@ -1,5 +1,18 @@
 package com.sanelink.app.ui.screens
 
+import com.sanelink.app.ui.components.ExpressiveLeadingBadge
+import com.sanelink.app.ui.components.ExpressiveSegmentedListItem
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.runtime.key
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.Row
+import com.sanelink.app.ui.components.RecentLinkPreviewItem
+import com.sanelink.app.core.history.RecentLink
+import com.sanelink.app.ui.components.copyFromRecent
+import com.sanelink.app.core.history.RecentLinks
 import com.sanelink.app.service.ClipboardCleaner
 import androidx.compose.runtime.saveable.rememberSaveable
 import android.content.ClipboardManager
@@ -41,6 +54,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreen(
+    onOpenRecentLinks: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val app = SaneLinkApp.instance
@@ -50,6 +64,8 @@ fun HomeScreen(
 
     val isAutoSanitize by app.preferences.autoSanitizeEnabled.collectAsState(initial = true)
     val stats by app.preferences.stats.collectAsState(initial = SanitizationStats())
+    val recentLinks by app.preferences.recentLinks.collectAsState(initial = emptyList())
+    val historyLimit by app.preferences.historyLimit.collectAsState(initial = RecentLinks.DEFAULT_LIMIT)
 
     var sandboxInput by rememberSaveable { mutableStateOf("") }
     // Follows rule changes (custom rules, patches, disabled providers) while on screen
@@ -91,6 +107,16 @@ fun HomeScreen(
                 }
             )
 
+            // Latest cleaned links (hidden when the log is turned off)
+            if (historyLimit != RecentLinks.OFF) {
+                RecentLinksPreviewCard(
+                    links = recentLinks.take(3),
+                    total = recentLinks.size,
+                    onCopyClean = { copyFromRecent(context, it, isOriginal = false) },
+                    onSeeAll = onOpenRecentLinks
+                )
+            }
+
             // Bottom blank area so content scrolls cleanly past floating button and navbar
             Spacer(modifier = Modifier.height(200.dp))
         }
@@ -122,5 +148,72 @@ fun HomeScreen(
                 .padding(bottom = 88.dp)
                 .height(52.dp)
         )
+    }
+}
+
+/**
+ * "Recent links" section on the dashboard: a group header with "See all", then the latest
+ * links as a segmented list, the same list style as Settings.
+ */
+@Composable
+private fun RecentLinksPreviewCard(
+    links: List<RecentLink>,
+    total: Int,
+    onCopyClean: (String) -> Unit,
+    onSeeAll: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.heightIn(min = 40.dp)
+        ) {
+            Text(
+                text = "Recent links",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp)
+            )
+            if (total > 0) {
+                TextButton(onClick = onSeeAll) {
+                    Text(if (total > links.size) "See all $total" else "See all", fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            if (links.isEmpty()) {
+                ExpressiveSegmentedListItem(
+                    leading = { ExpressiveLeadingBadge(icon = painterResource(R.drawable.ic_history)) },
+                    headline = {
+                        Text(
+                            text = "Nothing cleaned yet",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    },
+                    supporting = {
+                        Text(
+                            text = "Links SaneLink cleans will show up here.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                )
+            } else {
+                links.forEachIndexed { i, link ->
+                    key(link.id) {
+                        RecentLinkPreviewItem(
+                            link = link,
+                            index = i,
+                            count = links.size,
+                            onCopyClean = { onCopyClean(link.clean) }
+                        )
+                    }
+                }
+            }
+        }
     }
 }

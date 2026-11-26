@@ -101,6 +101,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.chrisbanes.haze.HazeInput
@@ -1264,6 +1265,27 @@ fun ExpressiveLeadingBadge(
 }
 
 /**
+ * Shape of one item in a segmented list: large outer corners on the first and last item,
+ * small [innerRadius] corners where items meet.
+ */
+fun expressiveSegmentShape(index: Int, count: Int, innerRadius: Dp, outerRadius: Dp = 24.dp): RoundedCornerShape = when {
+    count <= 1 -> RoundedCornerShape(outerRadius)
+    index == 0 -> RoundedCornerShape(
+        topStart = outerRadius,
+        topEnd = outerRadius,
+        bottomStart = innerRadius,
+        bottomEnd = innerRadius
+    )
+    index == count - 1 -> RoundedCornerShape(
+        topStart = innerRadius,
+        topEnd = innerRadius,
+        bottomStart = outerRadius,
+        bottomEnd = outerRadius
+    )
+    else -> RoundedCornerShape(innerRadius)
+}
+
+/**
  * Material 3 Expressive Segmented List Item.
  *
  * Implements M3 Expressive Segmented List specifications:
@@ -1303,24 +1325,7 @@ fun ExpressiveSegmentedListItem(
         label = "segmentedItemInnerRadius"
     )
 
-    val outerRadius = 24.dp
-
-    val shape = when {
-        count <= 1 -> RoundedCornerShape(outerRadius)
-        index == 0 -> RoundedCornerShape(
-            topStart = outerRadius,
-            topEnd = outerRadius,
-            bottomStart = innerRadius,
-            bottomEnd = innerRadius
-        )
-        index == count - 1 -> RoundedCornerShape(
-            topStart = innerRadius,
-            topEnd = innerRadius,
-            bottomStart = outerRadius,
-            bottomEnd = outerRadius
-        )
-        else -> RoundedCornerShape(innerRadius)
-    }
+    val shape = expressiveSegmentShape(index, count, innerRadius)
 
     val itemContent = @Composable {
         Row(

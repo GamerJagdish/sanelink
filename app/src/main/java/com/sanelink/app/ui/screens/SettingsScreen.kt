@@ -1,5 +1,7 @@
 package com.sanelink.app.ui.screens
 
+import com.sanelink.app.ui.components.ExpressiveConnectedButtonGroup
+import com.sanelink.app.core.history.RecentLinks
 import com.sanelink.app.ui.components.ExpressiveTactileButton
 import com.sanelink.app.util.performClickHaptic
 import android.content.Intent
@@ -51,6 +53,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(
     onOpenAutoSanitize: () -> Unit,
+    onOpenRecentLinks: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -193,7 +196,21 @@ fun SettingsScreen(
             }
         }
 
-        // Group 3: About & Info (Material 3 Expressive Segmented Container)
+        // Group 3: Your data (recent links, backup)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "Your data",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 12.dp)
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                RecentLinksSettingRow(index = 0, count = 1, onOpen = onOpenRecentLinks)
+            }
+        }
+
+        // Group 4: About & Info (Material 3 Expressive Segmented Container)
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
                 text = "About",
@@ -405,4 +422,63 @@ fun SettingsScreen(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     }
+}
+
+/** Recent links log: how many to keep (Off / 10 / 20 / 50 / All), and a way to open it. */
+@Composable
+private fun RecentLinksSettingRow(index: Int, count: Int, onOpen: () -> Unit) {
+    val app = SaneLinkApp.instance
+    val scope = rememberCoroutineScope()
+    val limit by app.preferences.historyLimit.collectAsState(initial = RecentLinks.DEFAULT_LIMIT)
+    val choices = RecentLinks.LIMIT_CHOICES
+    val labels = choices.map {
+        when (it) {
+            RecentLinks.OFF -> "Off"
+            RecentLinks.UNLIMITED -> "All"
+            else -> it.toString()
+        }
+    }
+    ExpressiveSegmentedListItem(
+        index = index,
+        count = count,
+        leading = { ExpressiveLeadingBadge(icon = painterResource(R.drawable.ic_history)) },
+        headline = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Recent links",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    painter = painterResource(R.drawable.ic_chevron_right),
+                    contentDescription = "Open recent links",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        },
+        supporting = {
+            Column {
+                Text(
+                    text = if (limit == RecentLinks.OFF) {
+                        "Off. Cleaned links aren't saved."
+                    } else {
+                        "Saved only on this phone, to copy a link again or get its original back."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                ExpressiveConnectedButtonGroup(
+                    options = labels,
+                    selectedIndex = choices.indexOf(limit).coerceAtLeast(0),
+                    onSelect = { i -> scope.launch { app.preferences.setHistoryLimit(choices[i]) } },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        onClick = onOpen
+    )
 }

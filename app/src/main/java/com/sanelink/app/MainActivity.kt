@@ -1,5 +1,6 @@
 package com.sanelink.app
 
+import com.sanelink.app.ui.screens.RecentLinksScreen
 import com.sanelink.app.ui.theme.tabSwitchTransition
 import com.sanelink.app.ui.theme.titleSwapTransition
 import com.sanelink.app.ui.screens.PatchPrefillSaver
@@ -91,7 +92,8 @@ private enum class ActiveScreen {
     MAIN,
     CUSTOM_RULE,
     BUILT_IN_DETAIL,
-    AUTO_SANITIZE
+    AUTO_SANITIZE,
+    RECENT_LINKS
 }
 
 class MainActivity : ComponentActivity() {
@@ -166,11 +168,13 @@ class MainActivity : ComponentActivity() {
                 var builtInStartPatchMode by rememberSaveable { mutableStateOf(false) }
                 var builtInPatchPrefill by rememberSaveable(stateSaver = PatchPrefillSaver) { mutableStateOf<PatchPrefill?>(null) }
                 var viewingAutoSanitize by rememberSaveable { mutableStateOf(false) }
+                var viewingRecentLinks by rememberSaveable { mutableStateOf(false) }
 
                 val activeScreen = when {
                     isAddingCustomRule || editingCustomRule != null -> ActiveScreen.CUSTOM_RULE
                     viewingBuiltInProviderId != null -> ActiveScreen.BUILT_IN_DETAIL
                     viewingAutoSanitize -> ActiveScreen.AUTO_SANITIZE
+                    viewingRecentLinks -> ActiveScreen.RECENT_LINKS
                     else -> ActiveScreen.MAIN
                 }
 
@@ -283,6 +287,10 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             )
+                        }
+                        ActiveScreen.RECENT_LINKS -> {
+                            BackHandler { viewingRecentLinks = false }
+                            RecentLinksScreen(onBack = { viewingRecentLinks = false })
                         }
                         ActiveScreen.AUTO_SANITIZE -> {
                             BackHandler { viewingAutoSanitize = false }
@@ -417,7 +425,7 @@ class MainActivity : ComponentActivity() {
                                             label = "tabContentTransition"
                                         ) { tab ->
                                             when (tab) {
-                                                0 -> HomeScreen()
+                                                0 -> HomeScreen(onOpenRecentLinks = { viewingRecentLinks = true })
                                                 1 -> RulesScreen(
                                                     selectedSubTab = rulesSubTab,
                                                     onSubTabChanged = { rulesSubTab = it },
@@ -432,7 +440,8 @@ class MainActivity : ComponentActivity() {
                                                     customListState = customListState
                                                 )
                                                 2 -> SettingsScreen(
-                                                    onOpenAutoSanitize = { viewingAutoSanitize = true }
+                                                    onOpenAutoSanitize = { viewingAutoSanitize = true },
+                                                    onOpenRecentLinks = { viewingRecentLinks = true }
                                                 )
                                             }
                                         }
