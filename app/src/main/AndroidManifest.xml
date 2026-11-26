@@ -11,6 +11,12 @@
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <!--
+        Optional: lets the Auto-Sanitize page show Android's "Allow ignoring battery
+        optimization" dialog, so aggressive OEM battery managers don't close SaneLink.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!--
         Optional, granted once over ADB (adb shell pm grant <pkg> android.permission.READ_LOGS).
         Lets SaneLink see the system's "clipboard changed" log line so it catches copies in
         every app on Android 10+. Log lines are matched in memory and never stored.

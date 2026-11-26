@@ -1,5 +1,9 @@
 package com.sanelink.app.ui.screens
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.TextButton
+import android.os.PowerManager
+import android.annotation.SuppressLint
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -116,6 +120,25 @@ private fun deriveMethod(
     status.shizukuActive || shizuku == ShizukuManager.State.ACTIVE -> DetectionMethod.SHIZUKU
     status.logAccessGranted -> DetectionMethod.ADB
     else -> DetectionMethod.COPY_BUTTONS
+}
+
+/** Whether SaneLink is exempt from battery optimization, re-checked on every resume. */
+@Composable
+private fun rememberIgnoringBatteryOptimizations(): Boolean {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    fun check(): Boolean =
+        (context.getSystemService(Context.POWER_SERVICE) as? PowerManager)
+            ?.isIgnoringBatteryOptimizations(context.packageName) == true
+    var exempt by remember { mutableStateOf(check()) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) exempt = check()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    return exempt
 }
 
 /** Tracks whether our accessibility service is enabled, re-checking on every resume. */
@@ -294,6 +317,13 @@ fun AutoSanitizeScreen(onBack: () -> Unit) {
                         AdbRow(status = status, shizukuActive = method == DetectionMethod.SHIZUKU, index = 1, count = 2)
                     }
                 }
+            }
+
+            SectionColumn(
+                title = "Stay reliable",
+                subtitle = "Optional. Only needed if your phone closes SaneLink in the background."
+            ) {
+                BatteryOptimizationRow()
             }
 
             Text(
@@ -481,6 +511,72 @@ private fun AccessibilityRow(serviceEnabled: Boolean) {
             }
         }
     )
+}
+
+/**
+ * Optional exemption from battery optimization. Stock Android keeps an enabled accessibility
+ * service running anyway; this helps on phones with aggressive battery managers (Samsung,
+ * Xiaomi, OnePlus, Oppo, Vivo, Huawei), which can close SaneLink and switch its service off.
+ */
+@Composable
+private fun BatteryOptimizationRow() {
+    val context = LocalContext.current
+    val exempt = rememberIgnoringBatteryOptimizations()
+    ExpressiveSegmentedListItem(
+        leading = { CheckBadge(done = exempt, icon = R.drawable.ic_battery) },
+        headline = { RowTitle("Ignore battery optimization") },
+        supporting = {
+            Column {
+                RowBody(
+                    if (exempt) {
+                        "SaneLink is exempt, so Android won't put it to sleep. It uses no battery while it waits for a copy."
+                    } else {
+                        "Some phones close background apps to save battery, which stops auto-clean until you open SaneLink again. Allowing this keeps it running; SaneLink uses no battery while it waits for a copy."
+                    }
+                )
+                Spacer(Modifier.height(12.dp))
+                TactileActionButton(
+                    text = if (exempt) "Allowed · Manage" else "Allow",
+                    icon = R.drawable.ic_open_in_new,
+                    onClick = { openBatteryOptimizationSettings(context, exempt) }
+                )
+                if (!exempt) {
+                    Spacer(Modifier.height(8.dp))
+                    RowBody("Still closed? Some brands have their own switch, often called Autostart or Sleeping apps. dontkillmyapp.com lists the steps for each brand.")
+                    TextLinkButton("Open dontkillmyapp.com") {
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse("https://dontkillmyapp.com/")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    }
+                }
+            }
+        }
+    )
+}
+
+/**
+ * Not yet exempt: shows Android's "Allow app to always run in background?" dialog.
+ * Already exempt: opens the system list where the exemption can be turned off again.
+ */
+@SuppressLint("BatteryLife") // Deliberate, user-initiated, and only offered as an option
+private fun openBatteryOptimizationSettings(context: Context, exempt: Boolean) {
+    val request = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${context.packageName}"))
+    val list = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+    for (intent in if (exempt) listOf(list) else listOf(request, list)) {
+        try {
+            context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            return
+        } catch (_: Exception) {
+            // Some OEM builds lack one of these screens; try the next
+        }
+    }
+}
+
+@Composable
+private fun TextLinkButton(text: String, onClick: () -> Unit) {
+    TextButton(onClick = onClick, contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp)) {
+        Text(text, fontWeight = FontWeight.SemiBold)
+    }
 }
 
 @Composable
