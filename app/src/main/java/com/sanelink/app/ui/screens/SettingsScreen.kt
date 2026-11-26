@@ -54,6 +54,7 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     onOpenAutoSanitize: () -> Unit,
     onOpenRecentLinks: () -> Unit,
+    onOpenOnboarding: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -222,10 +223,38 @@ fun SettingsScreen(
             )
 
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                // About SaneLink Row
+                // Welcome guide Row
                 ExpressiveSegmentedListItem(
                     index = 0,
-                    count = 2,
+                    count = 3,
+                    leading = {
+                        ExpressiveLeadingBadge(
+                            icon = painterResource(R.drawable.ic_auto_fix_high)
+                        )
+                    },
+                    headline = {
+                        Text(
+                            text = "Welcome guide",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    },
+                    trailing = {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_chevron_right),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    },
+                    onClick = onOpenOnboarding
+                )
+
+                // About SaneLink Row
+                ExpressiveSegmentedListItem(
+                    index = 1,
+                    count = 3,
                     leading = {
                         ExpressiveLeadingBadge(
                             icon = painterResource(R.drawable.ic_info)
@@ -252,8 +281,8 @@ fun SettingsScreen(
 
                 // Version Row
                 ExpressiveSegmentedListItem(
-                    index = 1,
-                    count = 2,
+                    index = 2,
+                    count = 3,
                     leading = {
                         ExpressiveLeadingBadge(
                             icon = painterResource(R.drawable.ic_code)

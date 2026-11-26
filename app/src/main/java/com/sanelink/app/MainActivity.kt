@@ -1,5 +1,8 @@
 package com.sanelink.app
 
+import kotlinx.coroutines.flow.first
+import androidx.compose.runtime.LaunchedEffect
+import com.sanelink.app.ui.screens.OnboardingScreen
 import com.sanelink.app.ui.screens.RecentLinksScreen
 import com.sanelink.app.ui.theme.tabSwitchTransition
 import com.sanelink.app.ui.theme.titleSwapTransition
@@ -93,7 +96,8 @@ private enum class ActiveScreen {
     CUSTOM_RULE,
     BUILT_IN_DETAIL,
     AUTO_SANITIZE,
-    RECENT_LINKS
+    RECENT_LINKS,
+    ONBOARDING
 }
 
 class MainActivity : ComponentActivity() {
@@ -169,8 +173,16 @@ class MainActivity : ComponentActivity() {
                 var builtInPatchPrefill by rememberSaveable(stateSaver = PatchPrefillSaver) { mutableStateOf<PatchPrefill?>(null) }
                 var viewingAutoSanitize by rememberSaveable { mutableStateOf(false) }
                 var viewingRecentLinks by rememberSaveable { mutableStateOf(false) }
+                var viewingOnboarding by rememberSaveable { mutableStateOf(false) }
+                // First launch: open the welcome guide (decided while the splash is still showing)
+                LaunchedEffect(Unit) {
+                    if (savedInstanceState == null && SaneLinkApp.instance.preferences.onboardingNeeded.first()) {
+                        viewingOnboarding = true
+                    }
+                }
 
                 val activeScreen = when {
+                    viewingOnboarding -> ActiveScreen.ONBOARDING
                     isAddingCustomRule || editingCustomRule != null -> ActiveScreen.CUSTOM_RULE
                     viewingBuiltInProviderId != null -> ActiveScreen.BUILT_IN_DETAIL
                     viewingAutoSanitize -> ActiveScreen.AUTO_SANITIZE
@@ -285,6 +297,15 @@ class MainActivity : ComponentActivity() {
                                     scope.launch {
                                         SaneLinkApp.instance.repository.resetUserPatch(currentProviderId)
                                     }
+                                }
+                            )
+                        }
+                        ActiveScreen.ONBOARDING -> {
+                            OnboardingScreen(
+                                onFinish = { setUpAutoClean ->
+                                    scope.launch { SaneLinkApp.instance.preferences.setOnboardingDone() }
+                                    viewingOnboarding = false
+                                    if (setUpAutoClean) viewingAutoSanitize = true
                                 }
                             )
                         }
@@ -441,7 +462,8 @@ class MainActivity : ComponentActivity() {
                                                 )
                                                 2 -> SettingsScreen(
                                                     onOpenAutoSanitize = { viewingAutoSanitize = true },
-                                                    onOpenRecentLinks = { viewingRecentLinks = true }
+                                                    onOpenRecentLinks = { viewingRecentLinks = true },
+                                                    onOpenOnboarding = { viewingOnboarding = true }
                                                 )
                                             }
                                         }
