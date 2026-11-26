@@ -39,12 +39,6 @@ object DomainSwapper {
         return d
     }
 
-    /** True when [host] is [domain] or one of its subdomains. */
-    fun hostMatches(host: String, domain: String): Boolean {
-        val h = host.lowercase().trimEnd('.')
-        return h == domain || h.endsWith(".$domain")
-    }
-
     /**
      * Regex (for [com.sanelink.app.core.model.CustomRule.urlPattern]) matching http(s) URLs on
      * [domain] or any of its subdomains. Built from an escaped literal, never from user regex.
