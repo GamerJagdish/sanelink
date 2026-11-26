@@ -148,6 +148,10 @@ jobs:
                       if not b_line:
                           continue
                       b_line = re.sub(r'^[\*\-\+]\s+', '', b_line)
+                      # Commit bodies mention code like @Serializable or @Preview. On GitHub a bare
+                      # @word is a user mention (it notifies that account and lists it as a release
+                      # contributor), so put any @word that isn't already in code inside backticks.
+                      b_line = re.sub(r'(?<![`\w])@([A-Za-z][\w-]*)', r'`@\1`', b_line)
                       commits.append(f'  * {b_line}')
 
           new_contributors = {}
