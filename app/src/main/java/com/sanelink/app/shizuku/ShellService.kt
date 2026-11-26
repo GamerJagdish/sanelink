@@ -25,6 +25,13 @@ class ShellService : IShellService.Stub() {
     private var callback: IClipboardSignalCallback? = null
     private var deathRecipient: IBinder.DeathRecipient? = null
 
+    init {
+        // When this helper exits (Shizuku stopping, unbinding, or the server dying), take the
+        // logcat child with it; otherwise it is reparented and keeps running until the next
+        // clipboard change. Runs only at exit, so it costs nothing while SaneLink is idle.
+        Runtime.getRuntime().addShutdownHook(Thread { stopClipboardWatch() })
+    }
+
     override fun destroy() {
         stopClipboardWatch()
         exitProcess(0)

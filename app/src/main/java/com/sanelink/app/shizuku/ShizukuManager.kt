@@ -143,6 +143,18 @@ object ShizukuManager {
     }
 
     private val binderDead = Shizuku.OnBinderDeadListener {
+        // Shizuku's server died, but our shell helper is its own process and would keep its log
+        // reader running. Its binder is still reachable directly, so ask it to exit. This runs
+        // once, only when Shizuku goes away: no polling, nothing extra in the background.
+        shellService?.let { orphan ->
+            ipcExecutor.execute {
+                try {
+                    orphan.destroy()
+                } catch (_: Exception) {
+                    // Already gone, or exited while answering
+                }
+            }
+        }
         shellService = null
         setActive(false, computeState())
     }
