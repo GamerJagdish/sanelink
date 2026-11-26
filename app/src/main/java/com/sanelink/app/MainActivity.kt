@@ -479,10 +479,7 @@ class MainActivity : ComponentActivity() {
                                         val isSelected = selectedTab == index
                                         val iconScale by animateFloatAsState(
                                             targetValue = if (isSelected) 1.15f else 1.0f,
-                                            animationSpec = spring(
-                                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                stiffness = Spring.StiffnessMediumLow
-                                            ),
+                                            animationSpec = motionScheme.fastSpatial,
                                             label = "navIconScale_$index"
                                         )
 

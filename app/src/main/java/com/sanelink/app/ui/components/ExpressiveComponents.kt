@@ -844,10 +844,7 @@ fun ExpressiveConnectedButtonGroup(
                         Spacer(modifier = Modifier.width(6.dp))
                         val badgeScale by animateFloatAsState(
                             targetValue = if (isSelected) 1.05f else 1f,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            ),
+                            animationSpec = motionScheme.fastSpatial,
                             label = "badgeScale_$index"
                         )
                         Box(
