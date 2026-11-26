@@ -511,7 +511,9 @@ fun ExpressiveSandboxCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             val keyboardController = LocalSoftwareKeyboardController.current
-            var textFieldValue by remember(inputText) {
+            // Not keyed on inputText: re-creating it on every keystroke moved the cursor to the end.
+            // External changes (e.g. Paste Link) are synced by the LaunchedEffect below.
+            var textFieldValue by remember {
                 mutableStateOf(TextFieldValue(text = inputText, selection = TextRange(inputText.length)))
             }
 
@@ -944,7 +946,8 @@ fun ExpressiveSearchBar(
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    var textFieldValue by remember(query) {
+    // Not keyed on query: re-creating it on every keystroke moved the cursor to the end.
+    var textFieldValue by remember {
         mutableStateOf(TextFieldValue(text = query, selection = TextRange(query.length)))
     }
 
