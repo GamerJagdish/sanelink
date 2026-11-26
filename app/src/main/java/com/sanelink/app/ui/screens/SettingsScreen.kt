@@ -1,5 +1,6 @@
 package com.sanelink.app.ui.screens
 
+import com.sanelink.app.ui.components.ExpressiveTactileButton
 import com.sanelink.app.util.performClickHaptic
 import android.content.Context
 import android.content.Intent
@@ -390,70 +391,13 @@ fun SettingsScreen(
                         }
                     }
 
-                    val ghInteraction = remember { MutableInteractionSource() }
-                    val isGhPressed by ghInteraction.collectIsPressedAsState()
-                    var ghDragOffsetX by remember { mutableFloatStateOf(0f) }
-                    val animatedGhDragOffset by animateFloatAsState(
-                        targetValue = ghDragOffsetX,
-                        animationSpec = motionScheme.fastSpatial,
-                        label = "ghDragOffset"
-                    )
-
-                    val ghScaleX by animateFloatAsState(
-                        targetValue = if (isGhPressed) 0.98f else 1f,
-                        animationSpec = motionScheme.fastSpatial,
-                        label = "ghScaleX"
-                    )
-                    val ghScaleY by animateFloatAsState(
-                        targetValue = if (isGhPressed) 0.92f else 1f,
-                        animationSpec = motionScheme.fastSpatial,
-                        label = "ghScaleY"
-                    )
-                    val ghCornerRadius by animateDpAsState(
-                        targetValue = if (isGhPressed) 14.dp else 24.dp,
-                        animationSpec = spring(
-                            dampingRatio = motionScheme.fastSpatial.dampingRatio,
-                            stiffness = motionScheme.fastSpatial.stiffness
-                        ),
-                        label = "ghCornerRadius"
-                    )
-
-                    FilledTonalButton(
+                    ExpressiveTactileButton(
                         onClick = {
-                            val intent = Intent(
-                                Intent.ACTION_VIEW,
-                                Uri.parse("https://github.com/GamerJagdish/sanelink")
+                            context.startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/GamerJagdish/sanelink"))
                             )
-                            context.startActivity(intent)
                         },
-                        shape = RoundedCornerShape(ghCornerRadius),
-                        interactionSource = ghInteraction,
-                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .graphicsLayer {
-                                scaleX = ghScaleX
-                                scaleY = ghScaleY
-                                translationX = animatedGhDragOffset
-                            }
-                            .pointerInput(Unit) {
-                                awaitEachGesture {
-                                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                                    val startX = down.position.x
-                                    try {
-                                        do {
-                                            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                                            val current = event.changes.firstOrNull { it.id == down.id } ?: break
-                                            if (current.pressed) {
-                                                val rawDelta = current.position.x - startX
-                                                ghDragOffsetX = (rawDelta * 0.35f).coerceIn(-48f, 48f)
-                                            }
-                                        } while (event.changes.any { it.id == down.id && it.pressed })
-                                    } finally {
-                                        ghDragOffsetX = 0f
-                                    }
-                                }
-                            }
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_code),
