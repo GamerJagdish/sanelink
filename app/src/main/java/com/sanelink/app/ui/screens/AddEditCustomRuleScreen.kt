@@ -1,5 +1,6 @@
 package com.sanelink.app.ui.screens
 
+import com.sanelink.app.util.formatProviderName
 import com.sanelink.app.ui.components.SectionLabel
 import com.sanelink.app.core.sanitizer.CustomRuleValidator
 import com.sanelink.app.ui.components.StringStateListSaver

@@ -1,5 +1,6 @@
 package com.sanelink.app.ui.screens
 
+import com.sanelink.app.util.formatProviderName
 import com.sanelink.app.ui.components.PatchedBadge
 import com.sanelink.app.ui.components.SectionLabel
 import com.sanelink.app.ui.theme.rememberReducedMotion
@@ -90,7 +91,6 @@ import com.sanelink.app.ui.components.ExpressiveSwitch
 import com.sanelink.app.ui.theme.GoogleSansCode
 import com.sanelink.app.ui.theme.LocalMotionScheme
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Values carried over from the custom rule editor when the user chooses to patch the matching
@@ -1110,15 +1110,4 @@ private fun extractDomainFromPattern(pattern: String, defaultName: String): Stri
     val clean = pattern.replace("\\", "").replace("^", "").replace("https?://", "")
     val match = Regex("([a-zA-Z0-9-]+\\.[a-zA-Z]{2,})").find(clean)
     return match?.value ?: "$defaultName.com"
-}
-
-private val formattedNameCache = ConcurrentHashMap<String, String>()
-
-fun formatProviderName(key: String): String {
-    return formattedNameCache.getOrPut(key) {
-        key.split("_", "-", " ")
-            .joinToString(" ") { word ->
-                word.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-            }
-    }
 }

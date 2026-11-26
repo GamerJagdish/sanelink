@@ -1,5 +1,6 @@
 package com.sanelink.app.ui.screens
 
+import com.sanelink.app.util.formatProviderName
 import com.sanelink.app.ui.components.RuleTag
 import com.sanelink.app.ui.components.PatchedBadge
 import com.sanelink.app.ui.theme.rememberReducedMotion
