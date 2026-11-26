@@ -1,5 +1,6 @@
 package com.sanelink.app.service
 
+import android.os.SystemClock
 import com.sanelink.app.SaneLinkApp
 import android.Manifest
 import android.content.ClipboardManager
@@ -45,6 +46,8 @@ object ClipboardMonitor {
 
     private const val TAG = "SaneLinkClipboard"
     private const val LOGCAT_RESTART_DELAY_MS = 5_000L
+    /** How long to let an installed Shizuku connect before falling back to our own log reader. */
+    private const val SHIZUKU_GRACE_MS = 5_000L
 
     data class Status(
         val serviceConnected: Boolean = false,
@@ -75,6 +78,7 @@ object ClipboardMonitor {
     @Volatile private var isAppInForeground = false
     /** Mirrors the dashboard toggle, so paused protection never steals focus. */
     @Volatile private var autoSanitizeEnabled = true
+    private var shizukuGraceUntil = 0L
 
     private val clipListener = ClipboardManager.OnPrimaryClipChangedListener {
         val ctx = appContext ?: return@OnPrimaryClipChangedListener
@@ -96,6 +100,7 @@ object ClipboardMonitor {
             it.addPrimaryClipChangedListener(clipListener)
         }
         _status.update { it.copy(serviceConnected = true) }
+        shizukuGraceUntil = SystemClock.uptimeMillis() + SHIZUKU_GRACE_MS
         refreshPermissionState(ctx)
         ShizukuManager.startWatching(
             onClipboardSignal = ::onSystemClipboardSignal,
@@ -186,6 +191,14 @@ object ClipboardMonitor {
         if (_status.value.shizukuActive) return
         if (!_status.value.logAccessGranted) return
         if (logcatProcess?.isAliveCompat() == true) return
+
+        // Shizuku needs no log-access prompt. If it's installed, give it a moment to connect
+        // after start-up instead of racing it and showing Android's prompt for nothing.
+        val graceLeft = shizukuGraceUntil - SystemClock.uptimeMillis()
+        if (graceLeft > 0 && ShizukuManager.state.value != ShizukuManager.State.NOT_INSTALLED) {
+            mainHandler.postDelayed({ maybeStartLogStream() }, graceLeft)
+            return
+        }
 
         // Android 13+ asks the user to approve log access, and auto-declines requests made
         // while the app is in the background. Only start when SaneLink is on screen.
