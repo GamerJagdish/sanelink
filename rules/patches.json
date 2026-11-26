@@ -22,7 +22,7 @@
       ]
     },
     "threads": {
-      "urlPattern": "^https?:\\/\\/(?:www\\.)?threads\\.net",
+      "urlPattern": "^https?:\\/\\/(?:www\\.)?threads\\.(?:net|com)",
       "completeProvider": false,
       "addRules": [
         "xmt",
