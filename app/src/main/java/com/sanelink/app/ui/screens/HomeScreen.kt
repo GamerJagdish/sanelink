@@ -55,9 +55,8 @@ fun HomeScreen(
     val stats by app.preferences.stats.collectAsState(initial = SanitizationStats())
 
     var sandboxInput by remember { mutableStateOf("") }
-    val sanitizer = remember(app.repository.clearUrlsData, app.repository.customRules, app.repository.disabledProviderIds) {
-        app.repository.getSanitizer()
-    }
+    // Follows rule changes (custom rules, patches, disabled providers) while on screen
+    val sanitizer by app.repository.sanitizer.collectAsState()
 
     val sandboxResult = remember(sandboxInput, sanitizer) {
         if (sandboxInput.isNotBlank()) sanitizer.sanitize(sandboxInput) else null
