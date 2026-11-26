@@ -55,6 +55,13 @@ private const val DotHop = 2.2f
  */
 private const val SystemSplashScale = 1.2f
 
+// Stage stiffness. Settle time scales with 1/sqrt(stiffness); raising these keeps the same
+// shape and bounces but plays the whole intro roughly a third faster.
+private const val DotStiffness = 3500f
+private const val OpenStiffness = 900f
+private const val DipStiffness = 2500f
+private const val ZoomStiffness = 180f
+
 private class PortalLogo(
     val letters: Path,
     val dot: Path,
@@ -154,18 +161,18 @@ fun PortalSplash(
                 launch {
                     settle.animateTo(
                         1f,
-                        spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                        spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
                     )
                 }
                 dotLift.animateTo(
                     DotHop,
-                    spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 2200f)
+                    spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = DotStiffness)
                 )
                 dotLift.animateTo(
                     0f,
                     spring(
                         dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = 2200f,
+                        stiffness = DotStiffness,
                         visibilityThreshold = 0.05f
                     )
                 )
@@ -175,7 +182,7 @@ fun PortalSplash(
                     1f,
                     spring(
                         dampingRatio = Spring.DampingRatioLowBouncy,
-                        stiffness = Spring.StiffnessMediumLow,
+                        stiffness = OpenStiffness,
                         visibilityThreshold = 0.01f
                     )
                 )
@@ -183,19 +190,19 @@ fun PortalSplash(
                 // 3: dip, then zoom through the stem.
                 dip.animateTo(
                     0.9f,
-                    spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
+                    spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = DipStiffness)
                 )
                 launch {
                     dip.animateTo(
                         1f,
-                        spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow)
+                        spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
                     )
                 }
                 zoom.animateTo(
                     1f,
                     spring(
                         dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = 80f,
+                        stiffness = ZoomStiffness,
                         visibilityThreshold = 0.002f
                     )
                 )
