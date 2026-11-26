@@ -41,6 +41,7 @@ class AppPreferences(private val context: Context) {
         val KEY_TOTAL_TRACKERS = longPreferencesKey("total_trackers_removed")
         val KEY_RECENT_LINKS = stringPreferencesKey("recent_links_json")
         val KEY_HISTORY_LIMIT = intPreferencesKey("recent_links_limit")
+        val KEY_ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
     }
 
     // Custom rules and user patches are stored as JSON strings. Unreadable JSON counts as empty.
@@ -120,6 +121,20 @@ class AppPreferences(private val context: Context) {
             linksCleaned = prefs[KEY_TOTAL_CLEANED] ?: 0L,
             trackersRemoved = prefs[KEY_TOTAL_TRACKERS] ?: 0L
         )
+    }
+
+    /**
+     * Whether the welcome guide should open on launch. Until it has been finished or skipped,
+     * it only shows on a fresh install: someone updating who has already cleaned links
+     * clearly knows the app.
+     */
+    val onboardingNeeded: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        val done = prefs[KEY_ONBOARDING_DONE]
+        done?.not() ?: ((prefs[KEY_TOTAL_CLEANED] ?: 0L) == 0L)
+    }
+
+    suspend fun setOnboardingDone() {
+        context.dataStore.edit { it[KEY_ONBOARDING_DONE] = true }
     }
 
     suspend fun setAutoSanitize(enabled: Boolean) {
