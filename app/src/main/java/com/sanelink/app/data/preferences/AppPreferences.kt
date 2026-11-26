@@ -32,9 +32,31 @@ class AppPreferences(private val context: Context) {
         val KEY_USER_PATCHES = stringPreferencesKey("user_patches_json")
         val KEY_TOTAL_CLEANED = longPreferencesKey("total_links_cleaned")
         val KEY_TOTAL_TRACKERS = longPreferencesKey("total_trackers_removed")
+    }
 
-        // User will add custom rules themselves
-        val DEFAULT_CUSTOM_RULES = emptyList<CustomRule>()
+    // Custom rules and user patches are stored as JSON strings. Unreadable JSON counts as empty.
+    private fun decodeCustomRules(raw: String?): List<CustomRule> =
+        if (raw.isNullOrBlank()) emptyList()
+        else runCatching { json.decodeFromString<List<CustomRule>>(raw) }.getOrDefault(emptyList())
+
+    private fun decodeUserPatches(raw: String?): Map<String, UserPatch> =
+        if (raw.isNullOrBlank()) emptyMap()
+        else runCatching { json.decodeFromString<Map<String, UserPatch>>(raw) }.getOrDefault(emptyMap())
+
+    private suspend fun editCustomRules(change: (MutableList<CustomRule>) -> Unit) {
+        context.dataStore.edit { prefs ->
+            val rules = decodeCustomRules(prefs[KEY_CUSTOM_RULES]).toMutableList()
+            change(rules)
+            prefs[KEY_CUSTOM_RULES] = json.encodeToString(rules)
+        }
+    }
+
+    private suspend fun editUserPatches(change: (MutableMap<String, UserPatch>) -> Unit) {
+        context.dataStore.edit { prefs ->
+            val patches = decodeUserPatches(prefs[KEY_USER_PATCHES]).toMutableMap()
+            change(patches)
+            prefs[KEY_USER_PATCHES] = json.encodeToString(patches)
+        }
     }
 
     val autoSanitizeEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -54,29 +76,11 @@ class AppPreferences(private val context: Context) {
     }
 
     val customRules: Flow<List<CustomRule>> = context.dataStore.data.map { prefs ->
-        val rawJson = prefs[KEY_CUSTOM_RULES]
-        if (rawJson.isNullOrBlank()) {
-            DEFAULT_CUSTOM_RULES
-        } else {
-            try {
-                json.decodeFromString<List<CustomRule>>(rawJson)
-            } catch (_: Exception) {
-                DEFAULT_CUSTOM_RULES
-            }
-        }
+        decodeCustomRules(prefs[KEY_CUSTOM_RULES])
     }
 
     val userPatches: Flow<Map<String, UserPatch>> = context.dataStore.data.map { prefs ->
-        val rawJson = prefs[KEY_USER_PATCHES]
-        if (rawJson.isNullOrBlank()) {
-            emptyMap()
-        } else {
-            try {
-                json.decodeFromString<Map<String, UserPatch>>(rawJson)
-            } catch (_: Exception) {
-                emptyMap()
-            }
-        }
+        decodeUserPatches(prefs[KEY_USER_PATCHES])
     }
 
     val stats: Flow<SanitizationStats> = context.dataStore.data.map { prefs ->
@@ -122,64 +126,18 @@ class AppPreferences(private val context: Context) {
         }
     }
 
-    suspend fun saveCustomRule(rule: CustomRule) {
-        context.dataStore.edit { prefs ->
-            val rawJson = prefs[KEY_CUSTOM_RULES]
-            val currentList = if (rawJson.isNullOrBlank()) {
-                mutableListOf()
-            } else {
-                try {
-                    json.decodeFromString<List<CustomRule>>(rawJson).toMutableList()
-                } catch (_: Exception) {
-                    mutableListOf()
-                }
-            }
-
-            val index = currentList.indexOfFirst { it.id == rule.id }
-            if (index >= 0) {
-                currentList[index] = rule
-            } else {
-                currentList.add(0, rule)
-            }
-            prefs[KEY_CUSTOM_RULES] = json.encodeToString(currentList)
-        }
+    suspend fun saveCustomRule(rule: CustomRule) = editCustomRules { rules ->
+        val index = rules.indexOfFirst { it.id == rule.id }
+        if (index >= 0) rules[index] = rule else rules.add(0, rule)
     }
 
-    suspend fun deleteCustomRule(ruleId: String) {
-        context.dataStore.edit { prefs ->
-            val rawJson = prefs[KEY_CUSTOM_RULES]
-            val currentList = if (rawJson.isNullOrBlank()) {
-                mutableListOf()
-            } else {
-                try {
-                    json.decodeFromString<List<CustomRule>>(rawJson).toMutableList()
-                } catch (_: Exception) {
-                    mutableListOf()
-                }
-            }
-            currentList.removeAll { it.id == ruleId }
-            prefs[KEY_CUSTOM_RULES] = json.encodeToString(currentList)
-        }
+    suspend fun deleteCustomRule(ruleId: String) = editCustomRules { rules ->
+        rules.removeAll { it.id == ruleId }
     }
 
-    suspend fun toggleCustomRule(ruleId: String, enabled: Boolean) {
-        context.dataStore.edit { prefs ->
-            val rawJson = prefs[KEY_CUSTOM_RULES]
-            val currentList = if (rawJson.isNullOrBlank()) {
-                mutableListOf()
-            } else {
-                try {
-                    json.decodeFromString<List<CustomRule>>(rawJson).toMutableList()
-                } catch (_: Exception) {
-                    mutableListOf()
-                }
-            }
-            val index = currentList.indexOfFirst { it.id == ruleId }
-            if (index >= 0) {
-                currentList[index] = currentList[index].copy(isEnabled = enabled)
-                prefs[KEY_CUSTOM_RULES] = json.encodeToString(currentList)
-            }
-        }
+    suspend fun toggleCustomRule(ruleId: String, enabled: Boolean) = editCustomRules { rules ->
+        val index = rules.indexOfFirst { it.id == ruleId }
+        if (index >= 0) rules[index] = rules[index].copy(isEnabled = enabled)
     }
 
     suspend fun recordSanitization(trackersRemovedCount: Int) {
@@ -191,37 +149,11 @@ class AppPreferences(private val context: Context) {
         }
     }
 
-    suspend fun saveUserPatch(patch: UserPatch) {
-        context.dataStore.edit { prefs ->
-            val rawJson = prefs[KEY_USER_PATCHES]
-            val currentMap = if (rawJson.isNullOrBlank()) {
-                mutableMapOf()
-            } else {
-                try {
-                    json.decodeFromString<Map<String, UserPatch>>(rawJson).toMutableMap()
-                } catch (_: Exception) {
-                    mutableMapOf()
-                }
-            }
-            currentMap[patch.providerId] = patch
-            prefs[KEY_USER_PATCHES] = json.encodeToString(currentMap)
-        }
+    suspend fun saveUserPatch(patch: UserPatch) = editUserPatches { patches ->
+        patches[patch.providerId] = patch
     }
 
-    suspend fun deleteUserPatch(providerId: String) {
-        context.dataStore.edit { prefs ->
-            val rawJson = prefs[KEY_USER_PATCHES]
-            val currentMap = if (rawJson.isNullOrBlank()) {
-                mutableMapOf()
-            } else {
-                try {
-                    json.decodeFromString<Map<String, UserPatch>>(rawJson).toMutableMap()
-                } catch (_: Exception) {
-                    mutableMapOf()
-                }
-            }
-            currentMap.remove(providerId)
-            prefs[KEY_USER_PATCHES] = json.encodeToString(currentMap)
-        }
+    suspend fun deleteUserPatch(providerId: String) = editUserPatches { patches ->
+        patches.remove(providerId)
     }
 }
