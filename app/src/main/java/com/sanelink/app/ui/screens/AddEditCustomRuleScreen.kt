@@ -1,5 +1,6 @@
 package com.sanelink.app.ui.screens
 
+import com.sanelink.app.core.sanitizer.CustomRuleValidator
 import com.sanelink.app.ui.components.StringStateListSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.animation.AnimatedContent
@@ -148,9 +149,13 @@ fun AddEditCustomRuleScreen(
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
+    // Validation: broken regexes and empty rules can't be saved
+    val urlPatternError = CustomRuleValidator.regexError(urlPattern)
+    val rewriteError = CustomRuleValidator.rewriteError(rewritePattern, rewriteReplacement)
+    val isNoOpSimpleRule = CustomRuleValidator.isNoOpSimpleRule(keepBuiltIn, params.size, swapInput.isValid)
     val canSave = when (mode) {
-        MODE_SIMPLE -> domain != null && (swapInput.isEmpty || swapInput.isValid)
-        else -> name.isNotBlank() && urlPattern.isNotBlank()
+        MODE_SIMPLE -> domain != null && (swapInput.isEmpty || swapInput.isValid) && !isNoOpSimpleRule
+        else -> name.isNotBlank() && urlPattern.isNotBlank() && urlPatternError == null && rewriteError == null
     }
 
     val onSaveAction: () -> Unit = save@{
@@ -345,7 +350,8 @@ fun AddEditCustomRuleScreen(
                             value = urlPattern,
                             onValueChange = { urlPattern = it },
                             label = "URL pattern (regex)",
-                            placeholder = "^https?://(?:www\\.)?reddit\\.com"
+                            placeholder = "^https?://(?:www\\.)?reddit\\.com",
+                            error = urlPatternError
                         )
                     }
 
@@ -378,7 +384,8 @@ fun AddEditCustomRuleScreen(
                             value = rewritePattern,
                             onValueChange = { rewritePattern = it },
                             label = "Match regex",
-                            placeholder = "^https?://(?:www\\.)?reddit\\.com/(.*)"
+                            placeholder = "^https?://(?:www\\.)?reddit\\.com/(.*)",
+                            error = if (rewritePattern.isNotBlank()) rewriteError else null
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         CodeField(
@@ -386,6 +393,7 @@ fun AddEditCustomRuleScreen(
                             onValueChange = { rewriteReplacement = it },
                             label = "Replace with",
                             placeholder = "https://redlib.catsarch.com/$1",
+                            error = if (rewritePattern.isBlank()) rewriteError else null,
                             imeAction = ImeAction.Done,
                             onDone = { focusManager.clearFocus() }
                         )
@@ -417,6 +425,15 @@ fun AddEditCustomRuleScreen(
                         },
                         onClick = { keepBuiltIn = !keepBuiltIn }
                     )
+
+                    AnimatedVisibility(visible = currentMode == MODE_SIMPLE && domain != null && isNoOpSimpleRule) {
+                        Text(
+                            text = "This rule doesn't change anything yet. Add a parameter to remove or a site to open on.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(start = 12.dp, top = 8.dp)
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(18.dp))
                     OutlinedTextField(
@@ -500,6 +517,7 @@ private fun CodeField(
     onValueChange: (String) -> Unit,
     label: String,
     placeholder: String,
+    error: String? = null,
     imeAction: ImeAction = ImeAction.Next,
     onDone: () -> Unit = {}
 ) {
@@ -509,6 +527,8 @@ private fun CodeField(
         onValueChange = onValueChange,
         label = { Text(label) },
         placeholder = { Text(placeholder) },
+        isError = error != null,
+        supportingText = error?.let { message -> { Text(message) } },
         textStyle = MaterialTheme.typography.bodyMedium.copy(
             fontFamily = GoogleSansCode,
             color = MaterialTheme.colorScheme.onSurface
