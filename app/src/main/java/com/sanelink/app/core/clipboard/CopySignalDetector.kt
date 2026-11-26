@@ -57,7 +57,7 @@ object CopySignalDetector {
     private val pasteNoticeWords = listOf("pasted", "pegó", "a collé", "eingefügt", "incollato", "colou")
 
     /** Texts that contain a copy word but are clearly not a copy action. */
-    private val falsePositiveWords = listOf("copyright", "copies")
+    private val falsePositiveWords = listOf("copyright", "copies", "cleared")
 
     fun isCopySignal(
         kind: EventKind,
@@ -78,6 +78,7 @@ object CopySignalDetector {
             CopySignalDetector.EventKind.ANNOUNCEMENT ->
                 packageName != FRAMEWORK &&
                     !containsAny(joined, pasteNoticeWords) &&
+                    !containsAny(joined, falsePositiveWords) &&
                     containsAny(joined, copiedConfirmationWords)
 
             // Android 13+ system clipboard overlay appearing after any copy
@@ -102,5 +103,31 @@ object CopySignalDetector {
     }
 
     private fun containsAny(text: String, words: List<String>): Boolean =
-        words.any { text.contains(it) }
+        words.any { containsWord(text, it) }
+
+    /**
+     * Whole-word match for words in alphabetic scripts ("copier" must not match
+     * "photocopier", "salin" must not match "saline"). Scripts written without spaces
+     * (Chinese, Japanese, Korean, Hindi) fall back to a plain substring match.
+     */
+    private fun containsWord(text: String, word: String): Boolean {
+        if (word.any { Character.UnicodeScript.of(it.code) in UNSPACED_SCRIPTS }) return text.contains(word)
+        var from = 0
+        while (true) {
+            val idx = text.indexOf(word, from)
+            if (idx < 0) return false
+            val before = text.getOrNull(idx - 1)
+            val after = text.getOrNull(idx + word.length)
+            if ((before == null || !before.isLetter()) && (after == null || !after.isLetter())) return true
+            from = idx + 1
+        }
+    }
+
+    private val UNSPACED_SCRIPTS = setOf(
+        Character.UnicodeScript.HAN,
+        Character.UnicodeScript.HIRAGANA,
+        Character.UnicodeScript.KATAKANA,
+        Character.UnicodeScript.HANGUL,
+        Character.UnicodeScript.DEVANAGARI,
+    )
 }
