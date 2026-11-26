@@ -573,7 +573,15 @@ class MainActivity : ComponentActivity() {
 
                                         NavigationBarItem(
                                             selected = isSelected,
-                                            onClick = { selectedTab = index },
+                                            onClick = {
+                                                // Same feel as swiping: drop focus, hide the keyboard, tick
+                                                if (selectedTab != index) {
+                                                    focusManager.clearFocus()
+                                                    keyboardController?.hide()
+                                                    triggerAppHaptic()
+                                                    selectedTab = index
+                                                }
+                                            },
                                             icon = {
                                                 Icon(
                                                     painter = painterResource(iconRes),
