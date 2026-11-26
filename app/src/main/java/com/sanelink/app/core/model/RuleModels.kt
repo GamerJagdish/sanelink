@@ -99,12 +99,9 @@ data class CustomRule(
 )
 
 data class SanitizerResult(
-    val originalText: String,
     val cleanText: String,
     val removedParameters: List<String> = emptyList(),
-    val wasModified: Boolean = false,
-    val matchedSites: List<String> = emptyList(),
-    val unwrappedUrl: String? = null
+    val wasModified: Boolean = false
 )
 
 data class SanitizationStats(

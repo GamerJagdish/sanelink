@@ -79,15 +79,13 @@ class UrlSanitizer(
      */
     fun sanitize(input: String): SanitizerResult {
         if (input.isBlank()) {
-            return SanitizerResult(originalText = input, cleanText = input)
+            return SanitizerResult(cleanText = input)
         }
 
         val matcher = URL_IN_TEXT.matcher(input)
         val out = StringBuilder(input.length)
         val allRemovedParams = mutableListOf<String>()
-        val matchedSites = mutableListOf<String>()
         var modified = false
-        var unwrappedUrl: String? = null
         var copiedUpTo = 0
 
         while (matcher.find()) {
@@ -100,8 +98,6 @@ class UrlSanitizer(
             if (result.wasModified) {
                 modified = true
                 allRemovedParams.addAll(result.removedParameters)
-                matchedSites.addAll(result.matchedSites)
-                if (result.unwrappedUrl != null) unwrappedUrl = result.unwrappedUrl
                 out.append(result.cleanText)
             } else {
                 out.append(originalUrl)
@@ -111,12 +107,9 @@ class UrlSanitizer(
         out.append(input, copiedUpTo, input.length)
 
         return SanitizerResult(
-            originalText = input,
             cleanText = out.toString(),
             removedParameters = allRemovedParams.distinct(),
-            wasModified = modified,
-            matchedSites = matchedSites.distinct(),
-            unwrappedUrl = unwrappedUrl
+            wasModified = modified
         )
     }
 
@@ -129,7 +122,6 @@ class UrlSanitizer(
         val original = rawUrl.trim()
         var currentUrl = original
         val removedParams = mutableListOf<String>()
-        val matchedSites = mutableListOf<String>()
 
         // 1. Custom rules (priority 1). Unless a rule keeps built-in cleaning, it is the only
         //    thing applied to matching URLs.
@@ -140,7 +132,6 @@ class UrlSanitizer(
             if (!custom.pattern.containsMatchIn(currentUrl)) continue
             val rule = custom.rule
             if (!rule.keepBuiltInCleaning) stopAfterCustom = true
-            matchedSites.add(rule.name)
             if (!rule.matchDomain.isNullOrBlank() && !rule.swapToDomain.isNullOrBlank()) {
                 customSwaps.add(DomainSwap(rule.matchDomain, rule.swapToDomain))
             }
@@ -172,12 +163,9 @@ class UrlSanitizer(
                     val nested = sanitizeSingleUrl(target, depth + 1)
                     val finalUrl = DomainSwapper.applyFirst(nested.cleanText, customSwaps) ?: nested.cleanText
                     return SanitizerResult(
-                        originalText = rawUrl,
                         cleanText = finalUrl,
                         removedParameters = (removedParams + "redirect:${provider.name}" + nested.removedParameters).distinct(),
-                        wasModified = true,
-                        matchedSites = (matchedSites + provider.name + nested.matchedSites).distinct(),
-                        unwrappedUrl = finalUrl
+                        wasModified = true
                     )
                 }
             }
@@ -185,21 +173,14 @@ class UrlSanitizer(
             // 4. Raw rules (path cleanup, e.g. Amazon /ref=...)
             for (provider in matching) {
                 for (raw in provider.rawRules) {
-                    val cleaned = currentUrl.replace(raw, "")
-                    if (cleaned != currentUrl) {
-                        currentUrl = cleaned
-                        matchedSites.add(provider.name)
-                    }
+                    currentUrl = currentUrl.replace(raw, "")
                 }
             }
 
             // 5. Query parameters: global rules (unless excepted) + matching providers
             val paramRules = buildList {
                 globalProvider?.takeIf { it.appliesTo(currentUrl) }?.let { addAll(it.paramRules) }
-                for (provider in matching) {
-                    if (provider.paramRules.isNotEmpty()) matchedSites.add(provider.name)
-                    addAll(provider.paramRules)
-                }
+                matching.forEach { addAll(it.paramRules) }
             }
             if (paramRules.isNotEmpty()) {
                 val (stripped, removed) = QueryStripper.strip(currentUrl) { key -> paramRules.any { it.matches(key) } }
@@ -211,21 +192,15 @@ class UrlSanitizer(
             val providerSwaps = matching.flatMap { it.frontendSwaps }
             val swapped = DomainSwapper.applyFirst(currentUrl, customSwaps)
                 ?: DomainSwapper.applyFirst(currentUrl, providerSwaps)
-            if (swapped != null) {
-                currentUrl = swapped
-                matchedSites.addAll(matching.filter { it.frontendSwaps.isNotEmpty() }.map { it.name })
-            }
+            if (swapped != null) currentUrl = swapped
         } else {
             DomainSwapper.applyFirst(currentUrl, customSwaps)?.let { currentUrl = it }
         }
 
         return SanitizerResult(
-            originalText = rawUrl,
             cleanText = currentUrl,
             removedParameters = removedParams.distinct(),
-            wasModified = currentUrl != original,
-            matchedSites = matchedSites.distinct(),
-            unwrappedUrl = null
+            wasModified = currentUrl != original
         )
     }
 
