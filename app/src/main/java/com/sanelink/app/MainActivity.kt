@@ -1,13 +1,10 @@
 package com.sanelink.app
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import com.sanelink.app.util.performClickHaptic
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
@@ -35,7 +32,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -49,17 +45,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -71,13 +64,11 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.HazePerformanceMode
 import dev.chrisbanes.haze.blur.HazeBlurStyle
 import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.blur.material3.Material3
-import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.sanelink.app.core.model.CustomRule
@@ -95,8 +86,6 @@ import com.sanelink.app.ui.theme.ExpressiveShapeTokens
 import com.sanelink.app.ui.theme.LocalMotionScheme
 import com.sanelink.app.ui.theme.SaneLinkTheme
 import com.sanelink.app.ui.theme.rememberReducedMotion
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 private enum class ActiveScreen {
@@ -108,13 +97,6 @@ private enum class ActiveScreen {
 
 class MainActivity : ComponentActivity() {
 
-    companion object {
-        const val EXTRA_QUICK_CLEAN = "com.sanelink.app.EXTRA_QUICK_CLEAN"
-    }
-
-    private var isQuickCleaning = false
-    private var quickCleanExecuted = false
-
     // X-style portal launch animation (cold start only)
     private var showPortalSplash by mutableStateOf(false)
     private var splashIconBounds by mutableStateOf<Rect?>(null)
@@ -122,9 +104,7 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        checkQuickCleanIntent(intent)
-
-        showPortalSplash = savedInstanceState == null && !isQuickCleaning
+        showPortalSplash = savedInstanceState == null
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             // Hand off from the system splash to PortalSplash without the default fade:
             // remember where the platform drew the icon so the overlay lines up exactly.
@@ -618,75 +598,5 @@ class MainActivity : ComponentActivity() {
 }
             }
 }
-    }
-
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        checkQuickCleanIntent(intent)
-    }
-
-    private fun checkQuickCleanIntent(intent: Intent?) {
-        if (intent?.getBooleanExtra(EXTRA_QUICK_CLEAN, false) == true) {
-            isQuickCleaning = true
-            quickCleanExecuted = false
-            if (hasWindowFocus()) {
-                quickCleanExecuted = true
-                performQuickClean()
-            }
-        }
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus && isQuickCleaning && !quickCleanExecuted) {
-            quickCleanExecuted = true
-            performQuickClean()
-        }
-    }
-
-    private fun performQuickClean() {
-        lifecycleScope.launch {
-            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-            val clip = cm?.primaryClip
-            val text = if (clip != null && clip.itemCount > 0) clip.getItemAt(0)?.text?.toString() else null
-
-            if (!text.isNullOrBlank()) {
-                val app = SaneLinkApp.instance
-                val sanitizer = app.repository.getSanitizer()
-                val result = sanitizer.sanitize(text)
-
-                if (result.wasModified && result.cleanText != text) {
-                    val newClip = ClipData.newPlainText("sanitized_url", result.cleanText)
-                    cm?.setPrimaryClip(newClip)
-
-                    app.preferences.recordSanitization(result.removedParameters.size)
-
-                    if (app.preferences.hapticFeedbackEnabled.first()) {
-                        performClickHaptic()
-                    }
-                    if (app.preferences.showToastEnabled.first()) {
-                        val count = result.removedParameters.size
-                        val msg = if (count > 0) {
-                            "Cleaned! Removed $count tracker${if (count > 1) "s" else ""}"
-                        } else {
-                            "Clean link copied to clipboard"
-                        }
-                        Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
-                    }
-                } else {
-                    if (app.preferences.showToastEnabled.first()) {
-                        Toast.makeText(this@MainActivity, "No tracking links found", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } else {
-                if (SaneLinkApp.instance.preferences.showToastEnabled.first()) {
-                    Toast.makeText(this@MainActivity, "No tracking links found", Toast.LENGTH_SHORT).show()
-                }
-            }
-
-            moveTaskToBack(true)
-            finish()
-        }
     }
 }

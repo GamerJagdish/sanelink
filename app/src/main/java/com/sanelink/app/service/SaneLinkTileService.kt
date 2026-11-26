@@ -1,12 +1,12 @@
 package com.sanelink.app.service
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Intent
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
-import com.sanelink.app.MainActivity
 import com.sanelink.app.R
 
 class SaneLinkTileService : TileService() {
@@ -32,13 +32,12 @@ class SaneLinkTileService : TileService() {
         }
     }
 
+    /**
+     * Opens the invisible clipboard reader (it needs focus to read on Android 10+), which
+     * cleans the clipboard and closes again. The main UI is never opened or closed.
+     */
     private fun launchCleanActivity() {
-        val intent = Intent(this, MainActivity::class.java).apply {
-            action = Intent.ACTION_VIEW
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            putExtra(MainActivity.EXTRA_QUICK_CLEAN, true)
-        }
-
+        val intent = ClipboardReaderActivity.createIntent(this, manual = true)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             val pendingIntent = PendingIntent.getActivity(
                 this,
@@ -48,8 +47,13 @@ class SaneLinkTileService : TileService() {
             )
             startActivityAndCollapse(pendingIntent)
         } else {
-            @Suppress("DEPRECATION")
-            startActivityAndCollapse(intent)
+            startActivityAndCollapseCompat(intent)
         }
+    }
+
+    @SuppressLint("StartActivityAndCollapseDeprecated") // The Intent overload is the only one before API 34
+    @Suppress("DEPRECATION")
+    private fun startActivityAndCollapseCompat(intent: Intent) {
+        startActivityAndCollapse(intent)
     }
 }
