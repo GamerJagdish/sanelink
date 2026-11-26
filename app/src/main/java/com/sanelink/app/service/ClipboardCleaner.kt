@@ -51,6 +51,17 @@ object ClipboardCleaner {
     }
 
     /**
+     * True when the clipboard holds text SaneLink wrote itself. Only looks at the clip's
+     * description, which (unlike reading the clip) doesn't make Android show its
+     * "pasted from your clipboard" notice.
+     */
+    fun holdsOwnClip(cm: ClipboardManager): Boolean = try {
+        cm.primaryClipDescription?.label == CLIP_LABEL
+    } catch (_: Exception) {
+        false
+    }
+
+    /**
      * Counts a cleaned link in the stats and adds it to the recent links log (if enabled).
      * Shared by every entry point that cleans a link.
      */

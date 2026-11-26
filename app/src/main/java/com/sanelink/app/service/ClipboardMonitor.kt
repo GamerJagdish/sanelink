@@ -92,6 +92,12 @@ object ClipboardMonitor {
     private val clipListener = ClipboardManager.OnPrimaryClipChangedListener {
         val ctx = appContext ?: return@OnPrimaryClipChangedListener
         // Only delivered when we are allowed to read (pre-Android 10, or SaneLink focused).
+        // Skip our own writes (copy buttons, cleaned links) without reading them: a read
+        // makes Android show "SaneLink pasted from your clipboard" for nothing.
+        val cm = clipboardManager
+        if (guard.isInEchoWindow() || (cm != null && ClipboardCleaner.holdsOwnClip(cm))) {
+            return@OnPrimaryClipChangedListener
+        }
         scope?.launch { ClipboardCleaner.cleanPrimaryClip(ctx) }
     }
 
