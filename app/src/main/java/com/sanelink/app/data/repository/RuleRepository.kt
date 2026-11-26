@@ -47,7 +47,6 @@ class RuleRepository(
     val customRules: StateFlow<List<CustomRule>> = _customRules.asStateFlow()
 
     private val _userPatches = MutableStateFlow<Map<String, UserPatch>>(emptyMap())
-    val userPatches: StateFlow<Map<String, UserPatch>> = _userPatches.asStateFlow()
 
     private val _bundledPatchedProviderIds = MutableStateFlow<Set<String>>(emptySet())
     val bundledPatchedProviderIds: StateFlow<Set<String>> = _bundledPatchedProviderIds.asStateFlow()
@@ -92,9 +91,6 @@ class RuleRepository(
                 }
         }
     }
-
-    /** Current sanitizer without waiting; may still lack the user's rules right after launch. */
-    fun getSanitizer(): UrlSanitizer = _sanitizer.value
 
     /**
      * Sanitizer that includes the user's saved rules. Waits for the first load (normally a
