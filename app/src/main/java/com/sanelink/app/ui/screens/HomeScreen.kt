@@ -1,5 +1,6 @@
 package com.sanelink.app.ui.screens
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -54,7 +55,7 @@ fun HomeScreen(
     val isAutoSanitize by app.preferences.autoSanitizeEnabled.collectAsState(initial = true)
     val stats by app.preferences.stats.collectAsState(initial = SanitizationStats())
 
-    var sandboxInput by remember { mutableStateOf("") }
+    var sandboxInput by rememberSaveable { mutableStateOf("") }
     // Follows rule changes (custom rules, patches, disabled providers) while on screen
     val sanitizer by app.repository.sanitizer.collectAsState()
 

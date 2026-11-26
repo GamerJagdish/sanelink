@@ -1,5 +1,6 @@
 package com.sanelink.app
 
+import com.sanelink.app.ui.screens.PatchPrefillSaver
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import com.sanelink.app.util.performClickHaptic
@@ -159,10 +160,13 @@ class MainActivity : ComponentActivity() {
 
                 // Full-screen page navigation states
                 var isAddingCustomRule by rememberSaveable { mutableStateOf(false) }
-                var editingCustomRule by remember { mutableStateOf<CustomRule?>(null) }
+                // Saved by id so an edit survives rotation; the rule itself comes from the repository
+                var editingCustomRuleId by rememberSaveable { mutableStateOf<String?>(null) }
+                val savedCustomRules by SaneLinkApp.instance.repository.customRules.collectAsState()
+                val editingCustomRule = editingCustomRuleId?.let { id -> savedCustomRules.firstOrNull { it.id == id } }
                 var viewingBuiltInProviderId by rememberSaveable { mutableStateOf<String?>(null) }
                 var builtInStartPatchMode by rememberSaveable { mutableStateOf(false) }
-                var builtInPatchPrefill by remember { mutableStateOf<PatchPrefill?>(null) }
+                var builtInPatchPrefill by rememberSaveable(stateSaver = PatchPrefillSaver) { mutableStateOf<PatchPrefill?>(null) }
                 var viewingAutoSanitize by rememberSaveable { mutableStateOf(false) }
 
                 val activeScreen = when {
@@ -257,27 +261,27 @@ class MainActivity : ComponentActivity() {
                         ActiveScreen.CUSTOM_RULE -> {
                             BackHandler {
                                 isAddingCustomRule = false
-                                editingCustomRule = null
+                                editingCustomRuleId = null
                             }
 
                             AddEditCustomRuleScreen(
                                 ruleToEdit = editingCustomRule,
                                 onBack = {
                                     isAddingCustomRule = false
-                                    editingCustomRule = null
+                                    editingCustomRuleId = null
                                 },
                                 onSave = { rule ->
                                     scope.launch {
                                         SaneLinkApp.instance.repository.saveCustomRule(rule)
                                         rulesSubTab = 1 // Immediately return to the Custom tab to see the saved/updated rule
                                         isAddingCustomRule = false
-                                        editingCustomRule = null
+                                        editingCustomRuleId = null
                                     }
                                 },
                                 onPatchBuiltIn = { providerId, prefill ->
                                     builtInPatchPrefill = prefill
                                     isAddingCustomRule = false
-                                    editingCustomRule = null
+                                    editingCustomRuleId = null
                                     viewingBuiltInProviderId = providerId
                                     builtInStartPatchMode = true
                                 }
@@ -507,7 +511,7 @@ class MainActivity : ComponentActivity() {
                                                     selectedSubTab = rulesSubTab,
                                                     onSubTabChanged = { rulesSubTab = it },
                                                     onAddCustomRule = { isAddingCustomRule = true },
-                                                    onEditCustomRule = { rule -> editingCustomRule = rule },
+                                                    onEditCustomRule = { rule -> editingCustomRuleId = rule.id },
                                                     onSelectBuiltInRule = { providerId ->
                                                         viewingBuiltInProviderId = providerId
                                                         builtInStartPatchMode = false

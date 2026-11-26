@@ -1,5 +1,6 @@
 package com.sanelink.app.ui.screens
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -114,8 +115,8 @@ fun RulesScreen(
     val bundledPatchedProviderIds by app.repository.bundledPatchedProviderIds.collectAsState()
     val userPatchedProviderIds by app.repository.userPatchedProviderIds.collectAsState()
 
-    var searchQuery by remember { mutableStateOf("") }
-    var showOnlyPatched by remember { mutableStateOf(false) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var showOnlyPatched by rememberSaveable { mutableStateOf(false) }
 
     val motionScheme = LocalMotionScheme.current
     val itemPlacementSpec = remember(motionScheme) {

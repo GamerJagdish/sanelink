@@ -1,5 +1,7 @@
 package com.sanelink.app.ui.screens
 
+import com.sanelink.app.ui.components.StringStateListSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
@@ -107,28 +109,28 @@ fun AddEditCustomRuleScreen(
 ) {
     val motionScheme = LocalMotionScheme.current
     // New rules and rules made in simple mode open in simple mode; regex rules open in advanced.
-    var mode by remember(ruleToEdit) {
+    var mode by rememberSaveable(ruleToEdit?.id) {
         mutableIntStateOf(if (ruleToEdit == null || ruleToEdit.matchDomain != null) MODE_SIMPLE else MODE_ADVANCED)
     }
-    var name by remember(ruleToEdit) { mutableStateOf(ruleToEdit?.name ?: "") }
-    var website by remember(ruleToEdit) { mutableStateOf(ruleToEdit?.matchDomain ?: "") }
-    var swapTo by remember(ruleToEdit) { mutableStateOf(ruleToEdit?.swapToDomain ?: "") }
-    val params = remember(ruleToEdit) {
+    var name by rememberSaveable(ruleToEdit?.id) { mutableStateOf(ruleToEdit?.name ?: "") }
+    var website by rememberSaveable(ruleToEdit?.id) { mutableStateOf(ruleToEdit?.matchDomain ?: "") }
+    var swapTo by rememberSaveable(ruleToEdit?.id) { mutableStateOf(ruleToEdit?.swapToDomain ?: "") }
+    val params = rememberSaveable(ruleToEdit?.id, saver = StringStateListSaver) {
         mutableStateListOf<String>().apply { ruleToEdit?.stripParameters?.let(::addAll) }
     }
     // New rules keep SaneLink's built-in cleaning by default; existing rules keep their setting.
-    var keepBuiltIn by remember(ruleToEdit) { mutableStateOf(ruleToEdit?.keepBuiltInCleaning ?: true) }
+    var keepBuiltIn by rememberSaveable(ruleToEdit?.id) { mutableStateOf(ruleToEdit?.keepBuiltInCleaning ?: true) }
 
     // Advanced (regex) fields
-    var urlPattern by remember(ruleToEdit) { mutableStateOf(ruleToEdit?.urlPattern ?: "") }
-    var rewritePattern by remember(ruleToEdit) { mutableStateOf(ruleToEdit?.rewritePattern ?: "") }
-    var rewriteReplacement by remember(ruleToEdit) { mutableStateOf(ruleToEdit?.rewriteReplacement ?: "") }
+    var urlPattern by rememberSaveable(ruleToEdit?.id) { mutableStateOf(ruleToEdit?.urlPattern ?: "") }
+    var rewritePattern by rememberSaveable(ruleToEdit?.id) { mutableStateOf(ruleToEdit?.rewritePattern ?: "") }
+    var rewriteReplacement by rememberSaveable(ruleToEdit?.id) { mutableStateOf(ruleToEdit?.rewriteReplacement ?: "") }
 
     val domain = DomainSwapper.normalizeDomain(website)
     val swapInput = parseDomainSwapInput(website, swapTo)
 
     val clearUrlsData by SaneLinkApp.instance.repository.clearUrlsData.collectAsState()
-    var dismissedConflictProvider by remember { mutableStateOf<String?>(null) }
+    var dismissedConflictProvider by rememberSaveable { mutableStateOf<String?>(null) }
     val matchingProvider = remember(mode, name, domain, urlPattern, clearUrlsData, dismissedConflictProvider) {
         findMatchingProvider(
             clearUrlsData = clearUrlsData,
@@ -525,7 +527,7 @@ private fun CodeField(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ParameterChipInput(params: MutableList<String>) {
-    var input by remember { mutableStateOf("") }
+    var input by rememberSaveable { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     fun commit() {

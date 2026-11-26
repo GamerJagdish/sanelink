@@ -1,5 +1,7 @@
 package com.sanelink.app.ui.screens
 
+import com.sanelink.app.ui.components.StringStateListSaver
+import androidx.compose.runtime.saveable.Saver
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Spring
@@ -98,6 +100,25 @@ data class PatchPrefill(
     val hasContent: Boolean get() = params.isNotEmpty() || !swapTo.isNullOrBlank()
 }
 
+/** Keeps a carried-over [PatchPrefill] across rotation. */
+val PatchPrefillSaver: Saver<PatchPrefill?, Any> = Saver(
+    save = { prefill ->
+        prefill?.let { arrayListOf(ArrayList(it.params), it.swapFrom.orEmpty(), it.swapTo.orEmpty()) } ?: arrayListOf<Any>()
+    },
+    restore = { saved ->
+        val list = saved as List<*>
+        if (list.isEmpty()) {
+            null
+        } else {
+            PatchPrefill(
+                params = (list[0] as List<*>).map { it as String },
+                swapFrom = (list[1] as String).ifEmpty { null },
+                swapTo = (list[2] as String).ifEmpty { null }
+            )
+        }
+    }
+)
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun BuiltInRuleDetailScreen(
@@ -137,7 +158,7 @@ fun BuiltInRuleDetailScreen(
 
     // Interactive Sample URL State
     val defaultDummy = remember(providerId, rule) { generateDummyUrl(providerId, rule) }
-    var testUrlInput by remember(defaultDummy) { mutableStateOf(defaultDummy) }
+    var testUrlInput by rememberSaveable(defaultDummy) { mutableStateOf(defaultDummy) }
 
     val sanitizer by app.repository.sanitizer.collectAsState()
     val testResult = remember(testUrlInput, sanitizer) {
@@ -149,14 +170,14 @@ fun BuiltInRuleDetailScreen(
     // Edit against the rule without the user's patch, so kept parameters stay listed and can be re-enabled.
     val unpatchedRule = remember(providerId, clearUrlsData) { app.repository.builtInRule(providerId) ?: rule }
     val baseRules = remember(unpatchedRule) { (unpatchedRule.rules + unpatchedRule.referralMarketing).distinct() }
-    val removedRules = remember(userPatch, rule, prefill) {
+    val removedRules = rememberSaveable(userPatch, prefill, saver = StringStateListSaver) {
         mutableStateListOf<String>().apply {
             userPatch?.removedRules?.let { addAll(it) }
             // A carried-over parameter the user had marked "Kept" should be stripped again.
             prefill?.params?.forEach { p -> removeAll { it.equals(p, ignoreCase = true) } }
         }
     }
-    val addedRules = remember(userPatch, rule, prefill) {
+    val addedRules = rememberSaveable(userPatch, prefill, saver = StringStateListSaver) {
         mutableStateListOf<String>().apply {
             userPatch?.addedRules?.let { addAll(it) }
             prefill?.params
@@ -167,20 +188,20 @@ fun BuiltInRuleDetailScreen(
                 ?.let { addAll(it) }
         }
     }
-    var newParamInput by remember { mutableStateOf("") }
+    var newParamInput by rememberSaveable { mutableStateOf("") }
 
     // Frontend swap ("open on a different site"), plain domains only
     val defaultSwapFrom = remember(rule, providerId) {
         DomainSwapper.guessDomain(rule.urlPattern, providerId).orEmpty()
     }
-    var swapFromText by remember(userPatch, defaultSwapFrom, prefill) {
+    var swapFromText by rememberSaveable(userPatch, defaultSwapFrom, prefill) {
         mutableStateOf(
             prefill?.swapFrom?.takeIf { !prefill.swapTo.isNullOrBlank() }
                 ?: userPatch?.frontendSwaps?.firstOrNull()?.from
                 ?: defaultSwapFrom
         )
     }
-    var swapToText by remember(userPatch, prefill) {
+    var swapToText by rememberSaveable(userPatch, prefill) {
         mutableStateOf(
             prefill?.swapTo?.takeIf { it.isNotBlank() }
                 ?: userPatch?.frontendSwaps?.firstOrNull()?.to.orEmpty()
