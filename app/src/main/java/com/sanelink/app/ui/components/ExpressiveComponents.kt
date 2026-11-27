@@ -1,5 +1,6 @@
 package com.sanelink.app.ui.components
 
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.animation.AnimatedContent
@@ -823,6 +824,8 @@ fun ExpressiveConnectedButtonGroup(
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
                         maxLines = 1,
                         softWrap = false,
+                        // Shrinks a little on narrow screens instead of cutting the label off
+                        autoSize = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = MaterialTheme.typography.labelLarge.fontSize),
                         color = contentColor
                     )
                     if (item.count != null) {

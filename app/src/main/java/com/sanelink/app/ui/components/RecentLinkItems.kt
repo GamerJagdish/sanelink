@@ -1,5 +1,9 @@
 package com.sanelink.app.ui.components
 
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.text.TextAutoSize
 import android.content.Context
 import android.os.Build
 import android.text.format.DateUtils
@@ -77,8 +81,8 @@ fun recentLinkDomain(link: RecentLink): String =
 
 private fun removedLabel(link: RecentLink): String = when (link.removed.size) {
     0 -> "Cleaned"
-    1 -> "1 tracker removed"
-    else -> "${link.removed.size} trackers removed"
+    1 -> "1 tracker"
+    else -> "${link.removed.size} trackers"
 }
 
 /** "Just now", "5 min. ago", "Yesterday"… */
@@ -243,8 +247,11 @@ fun RecentLinkListItem(
                         maxLines = if (expanded) 4 else 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    // Narrow screens skip where it came from, so the time still fits
+                    val showSource = LocalConfiguration.current.screenWidthDp >= 360
                     Text(
-                        text = "${link.source.label} · ${removedLabel(link)} · $timeLabel",
+                        text = listOfNotNull(link.source.label.takeIf { showSource }, removedLabel(link), timeLabel)
+                            .joinToString(" · "),
                         style = MaterialTheme.typography.bodySmall,
                         color = scheme.onSurfaceVariant,
                         maxLines = 1,
@@ -303,22 +310,28 @@ fun RecentLinkListItem(
                             }
                         }
                     }
+                    BoxWithConstraints {
+                    // Narrow screens: a copy icon carries the "Copy" and the labels shorten
+                    val compact = maxWidth < 300.dp
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        ExpressiveTactileButton(
-                            onClick = onCopyClean,
+                        CopyButton(
+                            label = if (compact) "Clean" else "Copy clean",
+                            showIcon = compact,
                             filled = true,
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+                            onClick = onCopyClean,
                             modifier = Modifier.weight(1f)
-                        ) { Text("Copy clean", fontWeight = FontWeight.SemiBold, maxLines = 1) }
-                        ExpressiveTactileButton(
+                        )
+                        CopyButton(
+                            label = if (compact) "Original" else "Copy original",
+                            showIcon = compact,
+                            filled = false,
                             onClick = onCopyOriginal,
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
                             modifier = Modifier.weight(1f)
-                        ) { Text("Copy original", fontWeight = FontWeight.SemiBold, maxLines = 1) }
+                        )
                         ExpressiveTactileIconButton(onClick = onDelete) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_delete),
@@ -327,9 +340,36 @@ fun RecentLinkListItem(
                             )
                         }
                     }
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun CopyButton(label: String, showIcon: Boolean, filled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    ExpressiveTactileButton(
+        onClick = onClick,
+        filled = filled,
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp),
+        modifier = modifier
+    ) {
+        if (showIcon) {
+            Icon(
+                painter = painterResource(R.drawable.ic_content_copy),
+                contentDescription = null,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(Modifier.width(6.dp))
+        }
+        Text(
+            text = label,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            autoSize = TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = MaterialTheme.typography.labelLarge.fontSize),
+            modifier = Modifier.weight(1f, fill = false)
+        )
     }
 }
 

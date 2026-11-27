@@ -1,5 +1,6 @@
 package com.sanelink.app.ui.screens
 
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.TextButton
 import android.os.PowerManager
@@ -500,7 +501,7 @@ private fun AccessibilityRow(serviceEnabled: Boolean) {
                 )
                 Spacer(Modifier.height(12.dp))
                 TactileActionButton(
-                    text = if (serviceEnabled) "Enabled" else "Open Accessibility settings",
+                    text = if (serviceEnabled) "Enabled" else "Open settings",
                     icon = if (serviceEnabled) R.drawable.ic_check else R.drawable.ic_open_in_new,
                     filled = !serviceEnabled,
                     onClick = {
@@ -734,7 +735,7 @@ private fun RowTitle(text: String) {
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.onSurface,
-        maxLines = 1,
+        maxLines = 2,
         overflow = TextOverflow.Ellipsis
     )
 }
@@ -904,7 +905,14 @@ private fun TactileActionButton(
             label = "actionBtnContent"
         ) { (label, iconRes) ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                Text(text = label, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                // Leaves room for the icon and shrinks to fit on narrow screens
+                Text(
+                    text = label,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    autoSize = TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = MaterialTheme.typography.labelLarge.fontSize),
+                    modifier = Modifier.weight(1f, fill = false)
+                )
                 Spacer(Modifier.size(8.dp))
                 Icon(painter = painterResource(iconRes), contentDescription = null, modifier = Modifier.size(16.dp))
             }

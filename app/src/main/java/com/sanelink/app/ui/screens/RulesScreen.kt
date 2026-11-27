@@ -1,5 +1,9 @@
 package com.sanelink.app.ui.screens
 
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.sanelink.app.util.formatProviderName
 import com.sanelink.app.ui.components.RuleTag
 import com.sanelink.app.ui.components.PatchedBadge
@@ -427,13 +431,20 @@ fun RulesScreen(
                     } else {
                         // Custom Rules Tab
                         if (customRules.isEmpty()) {
+                            // Scrolls and ends above the floating "Add Custom Rule" button; on short
+                            // screens the big icon is left out so the text clears the button
+                            BoxWithConstraints {
+                            // The bottom 180dp sits behind the floating button and the nav bar
+                            val showIcon = maxHeight - 180.dp >= 300.dp
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .verticalScroll(rememberScrollState())
                                     .padding(horizontal = 24.dp)
-                                    .padding(top = 64.dp),
+                                    .padding(top = if (showIcon) 48.dp else 20.dp, bottom = 180.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
+                                if (showIcon) {
                                 Box(
                                     modifier = Modifier
                                         .size(84.dp)
@@ -450,25 +461,29 @@ fun RulesScreen(
                                 }
 
                                 Spacer(modifier = Modifier.height(20.dp))
+                                }
 
                                 Text(
                                     text = "No Custom Rules Yet",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
-                                    textAlign = TextAlign.Center
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    autoSize = TextAutoSize.StepBased(minFontSize = 16.sp, maxFontSize = MaterialTheme.typography.titleLarge.fontSize)
                                 )
 
                                 Spacer(modifier = Modifier.height(10.dp))
 
                                 Text(
-                                    text = "Tap the button below to add your own custom rule to strip tracking parameters or rewrite frontends.",
+                                    text = "Add your own rule to strip trackers or open links on another site.",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
                                     lineHeight = 22.sp,
                                     modifier = Modifier.padding(horizontal = 16.dp)
                                 )
+                            }
                             }
                         } else if (filteredCustomRules.isEmpty()) {
                             Column(

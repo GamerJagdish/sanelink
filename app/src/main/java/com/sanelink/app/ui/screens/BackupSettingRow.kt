@@ -1,5 +1,6 @@
 package com.sanelink.app.ui.screens
 
+import androidx.compose.foundation.layout.BoxWithConstraints
 import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
@@ -112,9 +113,13 @@ fun BackupSettingRow(index: Int, count: Int) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    BackupButton(text = "Export", icon = R.drawable.ic_upload, onClick = { showExport = true }, modifier = Modifier.weight(1f))
-                    BackupButton(text = "Import", icon = R.drawable.ic_download, onClick = { showImport = true }, modifier = Modifier.weight(1f))
+                BoxWithConstraints {
+                    // Icons only when there's room for them next to the words
+                    val showIcons = maxWidth >= 220.dp
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        BackupButton("Export", R.drawable.ic_upload, showIcons, { showExport = true }, Modifier.weight(1f))
+                        BackupButton("Import", R.drawable.ic_download, showIcons, { showImport = true }, Modifier.weight(1f))
+                    }
                 }
             }
         }
@@ -201,14 +206,16 @@ fun BackupSettingRow(index: Int, count: Int) {
 }
 
 @Composable
-private fun BackupButton(text: String, icon: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun BackupButton(text: String, icon: Int, showIcon: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     ExpressiveTactileButton(
         onClick = onClick,
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
         modifier = modifier
     ) {
-        Icon(painter = painterResource(icon), contentDescription = null, modifier = Modifier.size(18.dp))
-        Spacer(modifier = Modifier.width(8.dp))
+        if (showIcon) {
+            Icon(painter = painterResource(icon), contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+        }
         Text(text, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
