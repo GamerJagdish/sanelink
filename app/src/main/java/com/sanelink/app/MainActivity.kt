@@ -9,7 +9,9 @@ import com.sanelink.app.ui.theme.titleSwapTransition
 import com.sanelink.app.ui.screens.PatchPrefillSaver
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import com.sanelink.app.util.OrientationPolicy
 import com.sanelink.app.util.performClickHaptic
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -100,16 +102,46 @@ private enum class ActiveScreen {
     ONBOARDING
 }
 
+private const val KEY_PORTAL_SPLASH_DONE = "portal_splash_done"
+
 class MainActivity : ComponentActivity() {
+
+    // Rotation and size changes recreate this activity (no configChanges in the manifest), so
+    // onCreate re-applies the policy; entering or leaving multi-window is reported here too.
+    override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean, newConfig: Configuration) {
+        super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
+        applyOrientationPolicy(newConfig, isInMultiWindowMode)
+    }
+
+    private fun applyOrientationPolicy(
+        config: Configuration,
+        inMultiWindow: Boolean = isInMultiWindowMode
+    ) {
+        val target = OrientationPolicy.requestedOrientationFor(
+            smallestScreenWidthDp = config.smallestScreenWidthDp,
+            isInMultiWindowMode = inMultiWindow
+        )
+        if (requestedOrientation != target) {
+            requestedOrientation = target
+        }
+    }
 
     // X-style portal launch animation (cold start only)
     private var showPortalSplash by mutableStateOf(false)
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // Launching while the phone is sideways restarts the activity in portrait before the
+        // animation can finish; only an animation that already played counts as done.
+        outState.putBoolean(KEY_PORTAL_SPLASH_DONE, !showPortalSplash)
+    }
     private var splashIconBounds by mutableStateOf<Rect?>(null)
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        showPortalSplash = savedInstanceState == null
+        applyOrientationPolicy(resources.configuration)
+        showPortalSplash = savedInstanceState?.getBoolean(KEY_PORTAL_SPLASH_DONE) != true
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             // Hand off from the system splash to PortalSplash without the default fade:
             // remember where the platform drew the icon so the overlay lines up exactly.
@@ -174,10 +206,14 @@ class MainActivity : ComponentActivity() {
                 var viewingAutoSanitize by rememberSaveable { mutableStateOf(false) }
                 var viewingRecentLinks by rememberSaveable { mutableStateOf(false) }
                 var viewingOnboarding by rememberSaveable { mutableStateOf(false) }
-                // First launch: open the welcome guide (decided while the splash is still showing)
+                var onboardingChecked by rememberSaveable { mutableStateOf(false) }
+                // First launch: open the welcome guide (decided while the splash is still showing).
+                // Guarded with rememberSaveable so an orientation recreation on launch never drops it.
                 LaunchedEffect(Unit) {
-                    if (savedInstanceState == null && SaneLinkApp.instance.preferences.onboardingNeeded.first()) {
-                        viewingOnboarding = true
+                    if (!onboardingChecked) {
+                        val needed = SaneLinkApp.instance.preferences.onboardingNeeded.first()
+                        onboardingChecked = true
+                        if (needed) viewingOnboarding = true
                     }
                 }
 
